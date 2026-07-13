@@ -9,6 +9,13 @@ import {
 } from "@/lib/auth";
 import { codRiskAllowed } from "@/lib/risk";
 
+function etaForHub(hub: string): [number, number] {
+  if (hub === "UAE") return [8, 16];
+  if (hub === "TR") return [10, 18];
+  if (hub === "CN") return [14, 28];
+  return [12, 24];
+}
+
 export async function POST(req: Request) {
   const user = await getSessionUser();
   if (!user) {
@@ -68,6 +75,14 @@ export async function POST(req: Request) {
     addressId = address.id;
   }
 
+  const wallet = await prisma.wallet.findUnique({ where: { userId: user.id } });
+  const useWallet = Boolean(body.useWalletCredit);
+  const walletCredit = useWallet
+    ? Math.min(wallet?.balanceUsd ?? 0, quote.total)
+    : 0;
+  const chargeTotal = Math.round((quote.total - walletCredit) * 100) / 100;
+
+  let depositUsd = 0;
   if (method === "COD") {
     const deliveryArea = await prisma.deliveryArea.findFirst({
       where: { city, area, active: true },
@@ -75,7 +90,7 @@ export async function POST(req: Request) {
     const gate = codRiskAllowed({
       riskScore: user.riskScore,
       codFails: user.codFails,
-      amountUsd: quote.total,
+      amountUsd: chargeTotal,
       areaCodAllowed: deliveryArea?.codAllowed ?? true,
       areaMax: deliveryArea?.codMaxUsd ?? 200,
     });
@@ -85,15 +100,26 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
+    // partial prepay deposit for COD over $100
+    if (chargeTotal > 100) {
+      depositUsd = Math.round(chargeTotal * 0.2 * 100) / 100;
+    }
   }
 
   const payload = JSON.parse(quote.payloadJson) as {
-    parsed: { title: string; url: string; imageUrl?: string | null };
+    parsed: {
+      title: string;
+      url: string;
+      imageUrl?: string | null;
+      variantLabel?: string;
+      screenshotUrl?: string;
+    };
   };
 
   const partner = await prisma.partnerOrg.findFirst({
     where: { active: true, hub: quote.hub },
   });
+  const [etaMin, etaMax] = etaForHub(quote.hub);
 
   const order = await prisma.order.create({
     data: {
@@ -105,14 +131,29 @@ export async function POST(req: Request) {
       quoteId: quote.id,
       partnerId: partner?.id,
       paymentMethod: method,
-      totalUsd: quote.total,
+      totalUsd: chargeTotal,
       itemTitle: payload.parsed.title,
       itemUrl: payload.parsed.url,
       itemImage: payload.parsed.imageUrl ?? null,
       quotedWeightKg: quote.chargeableKg,
       giftNote: body.giftNote ?? null,
+      tipUsd: Number(body.tipUsd || 0),
+      depositUsd,
+      walletCreditApplied: walletCredit,
+      variantLabel: body.variantLabel || payload.parsed.variantLabel || null,
+      screenshotUrl: body.screenshotUrl || payload.parsed.screenshotUrl || null,
+      etaDaysMin: etaMin,
+      etaDaysMax: etaMax,
     },
   });
+
+  if (walletCredit > 0) {
+    await prisma.wallet.update({
+      where: { userId: user.id },
+      data: { balanceUsd: { decrement: walletCredit } },
+    });
+    await postLedger(order.id, "wallet", walletCredit, 0, "Wallet credit applied");
+  }
 
   await addOrderEvent(order.id, "awaiting_payment", "Order created. Awaiting payment.");
   await notifyUser(user.id, "quote_ready", {
@@ -127,12 +168,20 @@ export async function POST(req: Request) {
     });
   }
 
+  // first-order auto promo tracking
+  const prior = await prisma.order.count({
+    where: { customerId: user.id, id: { not: order.id } },
+  });
+  if (prior === 0 && !quote.promoCode) {
+    await addOrderEvent(order.id, "awaiting_payment", "First-order customer");
+  }
+
   const payment = await prisma.paymentIntent.create({
     data: {
       orderId: order.id,
       method,
       status: method === "COD" ? "REQUIRES_ACTION" : "PENDING",
-      amountUsd: quote.total,
+      amountUsd: method === "COD" && depositUsd > 0 ? depositUsd : chargeTotal + Number(body.tipUsd || 0),
       checkoutUrl:
         method === "WHISH"
           ? `/app/checkout/${order.id}/whish`
@@ -150,14 +199,14 @@ export async function POST(req: Request) {
     },
   });
 
-  if (method === "COD") {
+  if (method === "COD" && depositUsd === 0) {
     await prisma.order.update({ where: { id: order.id }, data: { status: "paid" } });
     await addOrderEvent(
       order.id,
       "paid",
       "COD selected. Order entered buy queue; cash collected on delivery.",
     );
-    await postLedger(order.id, "cash_cod", 0, quote.total, "COD pledged");
+    await postLedger(order.id, "cash_cod", 0, chargeTotal, "COD pledged");
   }
 
   if (body.createPayLink) {
@@ -175,8 +224,16 @@ export async function POST(req: Request) {
       publicId: order.publicId,
       payment,
       payLink: `/pay/${token}`,
+      depositUsd,
+      walletCredit,
     });
   }
 
-  return NextResponse.json({ orderId: order.id, publicId: order.publicId, payment });
+  return NextResponse.json({
+    orderId: order.id,
+    publicId: order.publicId,
+    payment,
+    depositUsd,
+    walletCredit,
+  });
 }

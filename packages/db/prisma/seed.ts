@@ -38,23 +38,39 @@ async function main() {
 
   await prisma.partnerOrg.upsert({
     where: { apiKey: "partner-demo-key" },
-    update: { name: "Demo UAE Hub", hub: "UAE", active: true },
+    update: {
+      name: "Demo UAE Hub",
+      hub: "UAE",
+      active: true,
+      loginEmail: "uae@partner.bridge",
+      loginCode: "246810",
+    },
     create: {
       name: "Demo UAE Hub",
       hub: "UAE",
       contact: "ops@demo-hub.ae",
       apiKey: "partner-demo-key",
+      loginEmail: "uae@partner.bridge",
+      loginCode: "246810",
     },
   });
 
   await prisma.partnerOrg.upsert({
     where: { apiKey: "partner-us-demo-key" },
-    update: { name: "Demo US Hub", hub: "US", active: true },
+    update: {
+      name: "Demo US Hub",
+      hub: "US",
+      active: true,
+      loginEmail: "us@partner.bridge",
+      loginCode: "246810",
+    },
     create: {
       name: "Demo US Hub",
       hub: "US",
       contact: "ops@demo-hub.us",
       apiKey: "partner-us-demo-key",
+      loginEmail: "us@partner.bridge",
+      loginCode: "246810",
     },
   });
 
@@ -199,6 +215,38 @@ async function main() {
     const existing = await prisma.supportMacro.findFirst({ where: { title: macro.title } });
     if (!existing) await prisma.supportMacro.create({ data: macro });
   }
+
+  for (const duty of [
+    { category: "beauty", dutyPct: 0.1, allowed: true },
+    { category: "supplements", dutyPct: 0.05, allowed: true },
+    { category: "fashion", dutyPct: 0.15, allowed: true },
+    { category: "electronics", dutyPct: 0.2, allowed: true },
+    { category: "weapons", dutyPct: 1, allowed: false },
+  ]) {
+    await prisma.categoryDuty.upsert({
+      where: { category: duty.category },
+      update: duty,
+      create: duty,
+    });
+  }
+
+  for (const fx of [
+    { currency: "AED", toUsd: 0.27, bufferPct: 0.02 },
+    { currency: "EUR", toUsd: 1.08, bufferPct: 0.02 },
+    { currency: "TRY", toUsd: 0.03, bufferPct: 0.03 },
+  ]) {
+    await prisma.fxBuffer.upsert({
+      where: { currency: fx.currency },
+      update: fx,
+      create: fx,
+    });
+  }
+
+  await prisma.affiliateLink.upsert({
+    where: { code: "CREATOR1" },
+    update: { active: true, creditUsd: 7 },
+    create: { code: "CREATOR1", label: "Creator pilot", creditUsd: 7 },
+  });
 
   console.log("Seed complete");
 }

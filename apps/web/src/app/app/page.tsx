@@ -22,6 +22,7 @@ export default async function AppHome() {
           ["/app/cart", "Cart"],
           ["/app/wishlist", "Wishlist"],
           ["/app/suite", "Suite"],
+          ["/app/payer", "Payer"],
           ["/app/support", "Support"],
           ["/app/family", "Family"],
           ["/app/settings", "Settings"],

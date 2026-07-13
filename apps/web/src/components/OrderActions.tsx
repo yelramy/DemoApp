@@ -9,17 +9,24 @@ export function OrderActions({
   canClaim,
   canReview,
   paymentMethod,
+  canReturn,
+  needsRetry,
 }: {
   orderId: string;
   mode: "card" | "actions" | "omt";
   canClaim?: boolean;
   canReview?: boolean;
   paymentMethod?: string;
+  canReturn?: boolean;
+  needsRetry?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [claimReason, setClaimReason] = useState("damage");
   const [rating, setRating] = useState(5);
+  const [csat, setCsat] = useState(5);
+  const [tipUsd, setTipUsd] = useState("0");
+  const [returnReason, setReturnReason] = useState("changed_mind");
   const [omtRef, setOmtRef] = useState("");
 
   if (mode === "card") {
@@ -85,6 +92,33 @@ export function OrderActions({
           Reorder
         </button>
         <button
+          className="btn btn-ghost text-xs"
+          type="button"
+          onClick={async () => {
+            const res = await fetch(`/api/orders/${orderId}/ticket`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ message: "Need help with this order" }),
+            });
+            const d = await res.json();
+            if (d.redirect) router.push(d.redirect);
+          }}
+        >
+          Support ticket
+        </button>
+        {needsRetry ? (
+          <button
+            className="btn btn-ghost text-xs"
+            type="button"
+            onClick={async () => {
+              await fetch(`/api/orders/${orderId}/retry-payment`, { method: "POST" });
+              router.refresh();
+            }}
+          >
+            Retry payment
+          </button>
+        ) : null}
+        <button
           className="btn btn-ghost text-xs text-[var(--danger)]"
           type="button"
           onClick={async () => {
@@ -130,30 +164,86 @@ export function OrderActions({
           </button>
         </div>
       ) : null}
-      {canReview ? (
+      {canReturn ? (
         <div className="flex flex-wrap gap-2">
-          <input
-            className="input max-w-[100px] py-2"
-            type="number"
-            min={1}
-            max={5}
-            value={rating}
-            onChange={(e) => setRating(Number(e.target.value))}
-          />
+          <select
+            className="input max-w-[180px] py-2"
+            value={returnReason}
+            onChange={(e) => setReturnReason(e.target.value)}
+          >
+            <option value="changed_mind">Changed mind</option>
+            <option value="wrong_size">Wrong size</option>
+            <option value="defective">Defective</option>
+          </select>
           <button
-            className="btn btn-primary text-xs"
+            className="btn btn-ghost text-xs"
             type="button"
             onClick={async () => {
-              await fetch(`/api/orders/${orderId}/reviews`, {
+              await fetch(`/api/orders/${orderId}/returns`, {
                 method: "POST",
                 headers: { "content-type": "application/json" },
-                body: JSON.stringify({ rating, body: "Great delivery" }),
+                body: JSON.stringify({ reason: returnReason }),
               });
               router.refresh();
             }}
           >
-            Submit review
+            Request return
           </button>
+        </div>
+      ) : null}
+      {canReview ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input
+              className="input max-w-[100px] py-2"
+              type="number"
+              min={1}
+              max={5}
+              value={rating}
+              onChange={(e) => setRating(Number(e.target.value))}
+              title="Star rating"
+            />
+            <input
+              className="input max-w-[100px] py-2"
+              type="number"
+              min={1}
+              max={5}
+              value={csat}
+              onChange={(e) => setCsat(Number(e.target.value))}
+              title="CSAT"
+            />
+            <input
+              className="input max-w-[100px] py-2"
+              type="number"
+              min={0}
+              step={0.5}
+              value={tipUsd}
+              onChange={(e) => setTipUsd(e.target.value)}
+              placeholder="Tip $"
+            />
+            <button
+              className="btn btn-primary text-xs"
+              type="button"
+              onClick={async () => {
+                await fetch(`/api/orders/${orderId}/reviews`, {
+                  method: "POST",
+                  headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ rating, body: "Great delivery", csatScore: csat }),
+                });
+                if (Number(tipUsd) > 0) {
+                  await fetch(`/api/orders/${orderId}/tip`, {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ tipUsd: Number(tipUsd) }),
+                  });
+                }
+                router.refresh();
+              }}
+            >
+              Rate + tip
+            </button>
+          </div>
+          <p className="text-xs text-[var(--ink)]/55">Rating · CSAT · optional tip</p>
         </div>
       ) : null}
     </div>

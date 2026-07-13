@@ -27,5 +27,11 @@ export async function POST(
       body: body.body,
     },
   });
+  if (body.csatScore != null) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { csatScore: Number(body.csatScore) },
+    });
+  }
   return NextResponse.json({ review });
 }

@@ -52,6 +52,19 @@ export function SuiteClient() {
     load();
   }
 
+  async function dispose(status: "abandoned" | "donate" | "discard") {
+    for (const id of selected) {
+      await fetch("/api/suite/dispose", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+    }
+    setMsg(`Marked ${selected.length} parcel(s) as ${status}`);
+    setSelected([]);
+    load();
+  }
+
   if (!data) return <p>Loading suite…</p>;
 
   return (
@@ -111,14 +124,40 @@ export function SuiteClient() {
             </label>
           ))}
         </div>
-        <button
-          className="btn btn-ghost mt-4"
-          type="button"
-          disabled={!selected.length}
-          onClick={consolidate}
-        >
-          Consolidate selected
-        </button>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            className="btn btn-ghost"
+            type="button"
+            disabled={!selected.length}
+            onClick={consolidate}
+          >
+            Consolidate selected
+          </button>
+          <button
+            className="btn btn-ghost text-xs"
+            type="button"
+            disabled={!selected.length}
+            onClick={() => dispose("donate")}
+          >
+            Donate
+          </button>
+          <button
+            className="btn btn-ghost text-xs"
+            type="button"
+            disabled={!selected.length}
+            onClick={() => dispose("abandoned")}
+          >
+            Abandon
+          </button>
+          <button
+            className="btn btn-ghost text-xs text-[var(--danger)]"
+            type="button"
+            disabled={!selected.length}
+            onClick={() => dispose("discard")}
+          >
+            Discard
+          </button>
+        </div>
         {msg ? <p className="mt-3 text-sm text-[var(--ok)]">{msg}</p> : null}
       </div>
     </div>

@@ -25,6 +25,7 @@ export default async function OrderDetailPage({
       claims: true,
       review: true,
       weightAdjustments: true,
+      returns: true,
     },
   });
   if (!order || (order.customerId !== user.id && user.role === "CUSTOMER")) {
@@ -37,9 +38,14 @@ export default async function OrderDetailPage({
   const needsCard =
     order.paymentMethod === "CARD" &&
     order.payments.every((p) => p.status !== "PAID");
+  const needsRetry = order.payments.some((p) => p.status === "FAILED");
   const photos: string[] = order.hubPhotoUrls
     ? JSON.parse(order.hubPhotoUrls)
     : [];
+  const etaLabel =
+    order.etaDaysMin && order.etaDaysMax
+      ? `${order.etaDaysMin}–${order.etaDaysMax} days`
+      : null;
 
   return (
     <div className="container-bridge grid gap-8 py-10 lg:grid-cols-[1fr_0.85fr]">
@@ -77,10 +83,39 @@ export default async function OrderDetailPage({
               {order.finalWeightKg ? ` · final ${order.finalWeightKg} kg` : ""}
             </dd>
           </div>
+          {etaLabel ? (
+            <div>
+              <dt className="text-[var(--ink)]/55">ETA window</dt>
+              <dd className="font-bold">{etaLabel}</dd>
+            </div>
+          ) : null}
+          {order.tipUsd ? (
+            <div>
+              <dt className="text-[var(--ink)]/55">Tip</dt>
+              <dd className="font-bold">{money(order.tipUsd)}</dd>
+            </div>
+          ) : null}
+          {order.walletCreditApplied ? (
+            <div>
+              <dt className="text-[var(--ink)]/55">Wallet applied</dt>
+              <dd className="font-bold">{money(order.walletCreditApplied)}</dd>
+            </div>
+          ) : null}
+          {order.variantLabel ? (
+            <div>
+              <dt className="text-[var(--ink)]/55">Variant</dt>
+              <dd className="font-bold">{order.variantLabel}</dd>
+            </div>
+          ) : null}
         </dl>
         {order.giftNote ? (
           <p className="mt-4 rounded-xl bg-[var(--sand)] p-3 text-sm">
             Gift note: {order.giftNote}
+          </p>
+        ) : null}
+        {order.returns.length > 0 ? (
+          <p className="mt-4 rounded-xl bg-[var(--sand)] p-3 text-sm">
+            Return: {order.returns.map((r) => `${r.reason} (${r.status})`).join(", ")}
           </p>
         ) : null}
         {order.weightAdjustments.length > 0 ? (
@@ -124,7 +159,12 @@ export default async function OrderDetailPage({
             mode="actions"
             paymentMethod={order.paymentMethod}
             canClaim={["delivered", "completed"].includes(order.status)}
+            canReturn={
+              ["delivered", "completed", "claim_open"].includes(order.status) &&
+              order.returns.length === 0
+            }
             canReview={["delivered", "completed"].includes(order.status) && !order.review}
+            needsRetry={needsRetry}
           />
         </div>
       </section>

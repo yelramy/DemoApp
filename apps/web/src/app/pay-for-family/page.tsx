@@ -24,8 +24,8 @@ export default function PayForFamilyPage() {
                 <strong>3.</strong> You pay. They track delivery to the door.
               </li>
             </ol>
-            <Link href="/login" className="btn btn-primary mt-8">
-              Create a payer account
+            <Link href="/app/payer" className="btn btn-primary mt-8">
+              Open payer dashboard
             </Link>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { money } from "@/lib/format";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { HubCompare } from "@/components/HubCompare";
 import { AddToCartButton } from "@/components/AddToCartButton";
+import { QuoteExpiry } from "@/components/QuoteExpiry";
 
 export default async function QuotePage({
   params,
@@ -27,6 +28,8 @@ export default async function QuotePage({
       hubHint: string;
       confidence: number;
       notes?: string;
+      variantLabel?: string;
+      screenshotUrl?: string;
     };
   };
 
@@ -62,10 +65,23 @@ export default async function QuotePage({
           >
             View original product
           </a>
+          {payload.parsed.variantLabel ? (
+            <p className="mt-3 text-sm font-semibold text-[var(--sea)]">
+              Variant: {payload.parsed.variantLabel}
+            </p>
+          ) : null}
           {payload.parsed.notes ? (
             <p className="mt-4 rounded-xl bg-[var(--sand)] p-3 text-sm">
               {payload.parsed.notes}
             </p>
+          ) : null}
+          {payload.parsed.screenshotUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={payload.parsed.screenshotUrl}
+              alt="Manual screenshot"
+              className="mt-4 max-h-48 rounded-xl object-contain"
+            />
           ) : null}
         </div>
       </section>
@@ -92,9 +108,7 @@ export default async function QuotePage({
             </dd>
           </div>
         </dl>
-        <p className="mt-3 text-xs text-[var(--ink)]/55">
-          Quote expires {quote.expiresAt.toLocaleString()} · customs is an estimate
-        </p>
+        <QuoteExpiry expiresAt={quote.expiresAt.toISOString()} />
         {expired ? (
           <p className="mt-4 text-sm text-[var(--danger)]">
             Quote expired.{" "}

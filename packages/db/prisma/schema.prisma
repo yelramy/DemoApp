@@ -142,6 +142,9 @@ model PartnerOrg {
   events    PartnerEvent[]
   batches   ShipmentBatch[]
   manifests Manifest[]
+  invoices  PartnerInvoice[]
+  loginEmail String?        @unique
+  loginCode  String?
 }
 
 model Quote {
@@ -163,6 +166,8 @@ model Quote {
   promoCode       String?
   expiresAt       DateTime
   abandonedNudgeAt DateTime?
+  overrideReason  String?
+  overrideById    String?
   payloadJson     String
   createdAt       DateTime  @default(now())
   order           Order?
@@ -201,6 +206,12 @@ model Order {
   deliveryProofUrl String?
   etaDaysMin       Int?
   etaDaysMax       Int?
+  tipUsd           Float?         @default(0)
+  depositUsd       Float?         @default(0)
+  walletCreditApplied Float?      @default(0)
+  variantLabel     String?
+  screenshotUrl    String?
+  returnStatus     String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   events           OrderEvent[]
@@ -212,6 +223,7 @@ model Order {
   review           Review?
   ledgerEntries    LedgerEntry[]
   csatScore        Int?
+  returns          ReturnRequest[]
 }
 
 model OrderEvent {
@@ -244,6 +256,7 @@ model PartnerEvent {
   partner     PartnerOrg @relation(fields: [partnerId], references: [id])
   orderId     String?
   eventType   String
+  eventKey    String?    @unique
   payloadJson String
   createdAt   DateTime   @default(now())
 }
@@ -548,4 +561,60 @@ model SupportMacro {
   title     String
   body      String
   active    Boolean @default(true)
+}
+
+model CategoryDuty {
+  id        String @id @default(cuid())
+  category  String @unique
+  dutyPct   Float
+  vatPct    Float  @default(0.11)
+  allowed   Boolean @default(true)
+}
+
+model FxBuffer {
+  id       String @id @default(cuid())
+  currency String @unique
+  toUsd    Float
+  bufferPct Float @default(0.02)
+}
+
+model ReturnRequest {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason    String
+  details   String?
+  status    String   @default("requested")
+  createdAt DateTime @default(now())
+}
+
+model PartnerInvoice {
+  id          String     @id @default(cuid())
+  partnerId   String
+  partner     PartnerOrg @relation(fields: [partnerId], references: [id])
+  weekOf      String
+  amountUsd   Float
+  kgTotal     Float
+  status      String     @default("open")
+  payloadJson String?
+  createdAt   DateTime   @default(now())
+}
+
+model AffiliateLink {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  label     String
+  creditUsd Float    @default(7)
+  clicks    Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ObservabilityEvent {
+  id        String   @id @default(cuid())
+  level     String
+  source    String
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
 }

@@ -5,8 +5,8 @@
 
 ## Status
 - Branch: `cursor/bridge-build-a9ff`
-- Phases 0–6 + catalog gap-fill (cart, wishlist, settings, admin console, MV3, CI)
-- Plan docs: `docs/bridge/`
+- Catalog coverage: sandbox-complete for web product; live PSP/WA/Postgres deferred
+- Plan docs: `docs/bridge/` · checklist: `docs/bridge/03-FULL-FEATURE-CATALOG.md`
 
 ## Run
 ```bash
@@ -16,16 +16,18 @@ pnpm dev
 ```
 - http://localhost:3000 · OTP `246810`
 - Customer `+96170123456` · Admin `admin@bridge.lb`
-- Partner `partner-demo-key` · Promo `BRIDGE10`
+- Partner login `uae@partner.bridge` / `246810` · API `partner-demo-key`
+- Promo `BRIDGE10` · Affiliate `CREATOR1`
 - Extension: load unpacked `apps/extension`
 
-## Highlights added in latest pass
-- Multi-item cart + share links + hub compare
-- Wishlist + price-drop alert job hook
-- Settings/KYC/export/delete, family members, OMT confirm, cancel/reorder, delivery OTP API
-- Admin console: kanban, users, claims, config
-- Contact / hubs / trust pages, support bot
-- Chrome MV3 scaffold + GitHub Actions CI
+## Latest pass (closing catalog gaps)
+- Schema: duties, FX, returns, partner invoices/login, affiliates, observability, tip/deposit/wallet/variant
+- Checkout: wallet credit, COD deposit, tip; quote expiry UI; variants/screenshot/category
+- Orders: ETA, returns, CSAT, tip, payment retry, per-order ticket
+- Suite: abandon/donate/discard; partner auto-match by tracking
+- Partner: login, invoices, rates, discrepancy + idempotent events
+- Diaspora: `/app/payer` multi-currency dashboard
+- Admin: CMS, quote override, affiliates, observability/audit tabs
 
 ## Still live-only
-Real Whish/Tap/WhatsApp credentials, production Postgres/Redis, Arabic UI, native apps.
+Real Whish/Tap/WhatsApp credentials, production Postgres/Redis/Nest workers, Arabic UI, native apps, Chrome Web Store publish.

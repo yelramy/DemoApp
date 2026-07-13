@@ -17,6 +17,10 @@ export async function POST(req: Request) {
       url: body.manual.url,
       estimatedWeightKg: body.manual.estimatedWeightKg,
     });
+    (parsed as { variantLabel?: string; screenshotUrl?: string; category?: string }).variantLabel =
+      body.variantLabel;
+    (parsed as { screenshotUrl?: string }).screenshotUrl = body.screenshotUrl;
+    (parsed as { category?: string }).category = body.category;
   } else if (body.url) {
     try {
       new URL(body.url);
@@ -40,6 +44,10 @@ export async function POST(req: Request) {
         { status: 422 },
       );
     }
+    (parsed as { variantLabel?: string; screenshotUrl?: string; category?: string }).variantLabel =
+      body.variantLabel;
+    (parsed as { screenshotUrl?: string }).screenshotUrl = body.screenshotUrl;
+    (parsed as { category?: string }).category = body.category;
   } else if (body.catalogSlug) {
     const product = await prisma.catalogProduct.findUnique({
       where: { slug: body.catalogSlug },
@@ -104,13 +112,32 @@ export async function POST(req: Request) {
   }
 
   const hub = (body.hub as string) || parsed.hubHint;
-  const config = await loadPricingConfig(hub);
+  const category = body.category as string | undefined;
+  let config;
+  try {
+    config = await loadPricingConfig(hub, category);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.startsWith("CATEGORY_BLOCKED")) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "CATEGORY_BLOCKED",
+            message: `Category “${category}” is not eligible.`,
+          },
+        },
+        { status: 422 },
+      );
+    }
+    throw e;
+  }
   const provisional = computeQuote(
     [
       {
         title: parsed.title,
         itemPriceUsd: parsed.priceUsd!,
         estimatedWeightKg: parsed.estimatedWeightKg,
+        category,
       },
     ],
     config,

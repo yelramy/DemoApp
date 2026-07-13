@@ -10,6 +10,9 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
   const [priceUsd, setPriceUsd] = useState("");
   const [promoCode, setPromoCode] = useState("");
   const [hub, setHub] = useState("");
+  const [category, setCategory] = useState("");
+  const [variantLabel, setVariantLabel] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
@@ -19,6 +22,13 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
     setLoading(true);
     setError(null);
     try {
+      const extras = {
+        promoCode: promoCode || undefined,
+        hub: hub || undefined,
+        category: category || undefined,
+        variantLabel: variantLabel || undefined,
+        screenshotUrl: screenshotUrl || undefined,
+      };
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -30,10 +40,9 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
                   priceUsd: Number(priceUsd),
                   url: url || undefined,
                 },
-                promoCode: promoCode || undefined,
-                hub: hub || undefined,
+                ...extras,
               }
-            : { url, promoCode: promoCode || undefined, hub: hub || undefined },
+            : { url, ...extras },
         ),
       });
       const data = await res.json();
@@ -77,8 +86,33 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
             onChange={(e) => setPriceUsd(e.target.value)}
             required
           />
+          <input
+            className="input"
+            placeholder="Screenshot URL (if parser fails)"
+            value={screenshotUrl}
+            onChange={(e) => setScreenshotUrl(e.target.value)}
+          />
         </>
       ) : null}
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          className="input"
+          placeholder="Size / variant"
+          value={variantLabel}
+          onChange={(e) => setVariantLabel(e.target.value)}
+        />
+        <select
+          className="input"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">Category (optional)</option>
+          <option value="beauty">Beauty</option>
+          <option value="supplements">Supplements</option>
+          <option value="fashion">Fashion</option>
+          <option value="electronics">Electronics</option>
+        </select>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <input
           className="input"

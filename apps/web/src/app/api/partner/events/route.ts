@@ -9,6 +9,7 @@ const EVENT_TO_STATUS: Record<string, OrderStatus> = {
   customs: "customs_clearance",
   delivered: "delivered",
   exception: "on_hold_hub",
+  discrepancy: "on_hold_hub",
 };
 
 export async function POST(req: Request) {
@@ -21,17 +22,50 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
+  const eventKey = body.event_id || body.eventKey;
+  if (eventKey) {
+    const existing = await prisma.partnerEvent.findUnique({
+      where: { eventKey: String(eventKey) },
+    });
+    if (existing) {
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+  }
+
   const order = await prisma.order.findFirst({
     where: {
       OR: [{ id: body.order_id }, { publicId: body.order_id }],
     },
   });
 
+  // auto-match suite inbound by tracking
+  if (!order && body.tracking) {
+    const expected = await prisma.expectedParcel.findFirst({
+      where: { tracking: body.tracking, status: "expected" },
+    });
+    if (expected) {
+      await prisma.expectedParcel.update({
+        where: { id: expected.id },
+        data: { status: "received", receivedAt: new Date() },
+      });
+      await prisma.partnerEvent.create({
+        data: {
+          partnerId: partner.id,
+          eventType: "suite_received",
+          eventKey: eventKey ? String(eventKey) : undefined,
+          payloadJson: JSON.stringify({ ...body, expectedParcelId: expected.id }),
+        },
+      });
+      return NextResponse.json({ ok: true, matchedSuite: expected.id });
+    }
+  }
+
   await prisma.partnerEvent.create({
     data: {
       partnerId: partner.id,
       orderId: order?.id,
       eventType: body.event_type,
+      eventKey: eventKey ? String(eventKey) : undefined,
       payloadJson: JSON.stringify(body),
     },
   });
@@ -53,12 +87,18 @@ export async function POST(req: Request) {
         hubPhotoUrls: photos,
         finalWeightKg,
         partnerId: partner.id,
+        notes:
+          body.event_type === "discrepancy"
+            ? `${order.notes || ""}\nDiscrepancy: ${body.notes || "reported"}`.trim()
+            : order.notes,
       },
     });
     await addOrderEvent(
       order.id,
       status,
-      `Partner event: ${body.event_type}`,
+      body.event_type === "discrepancy"
+        ? `Discrepancy: ${body.notes || "wrong/damaged on arrival"}`
+        : `Partner event: ${body.event_type}`,
       body,
     );
     await notifyUser(order.customerId, body.event_type, {
@@ -87,11 +127,6 @@ export async function POST(req: Request) {
         "weight_adjust",
         `Weight overage ${extraKg.toFixed(2)}kg · extra $${extraUsd}`,
       );
-      await notifyUser(order.customerId, "weight_adjust", {
-        order_id: order.publicId,
-        amount: extraUsd,
-        kg: body.weight_kg,
-      });
     }
 
     if (status === "delivered") {
@@ -113,7 +148,9 @@ export async function GET(req: Request) {
   const expected = await prisma.order.findMany({
     where: {
       partnerId: partner.id,
-      status: { in: ["purchased", "awaiting_inbound", "received_at_hub", "consolidated"] },
+      status: {
+        in: ["purchased", "awaiting_inbound", "received_at_hub", "consolidated"],
+      },
     },
     orderBy: { createdAt: "asc" },
     take: 100,
