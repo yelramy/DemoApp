@@ -31,3 +31,6 @@ pnpm dev
 
 ## Still live-only
 Real Whish/Tap/WhatsApp credentials, production Postgres/Redis/Nest workers, Arabic UI, native apps, Chrome Web Store publish.
+
+## CI note
+`.github/workflows/ci.yml` uses `pnpm/action-setup@v4` without a `version` key (reads `packageManager` from root `package.json`) and Node 24.
