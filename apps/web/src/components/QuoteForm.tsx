@@ -83,7 +83,7 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
             autoCapitalize="off"
             autoCorrect="off"
             enterKeyHint="go"
-            placeholder="Paste noon / amazon link"
+            placeholder="https://amazon.ae/product…"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             required={!manual}
@@ -131,7 +131,7 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
       {!compact ? (
         <details className="rounded-2xl border border-black/5 bg-white/60 p-3">
           <summary className="cursor-pointer text-sm font-semibold text-[var(--sea-deep)]">
-            Options (variant, hub, promo)
+            Add size, color, promo, or shipping preference
           </summary>
           <div className="mt-3 grid gap-2">
             <input
@@ -171,7 +171,7 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       <div className="flex flex-col gap-2 sm:flex-row">
         <button className="btn btn-primary w-full" disabled={loading} type="submit">
-          {loading ? "Calculating…" : "Get all-in quote"}
+          {loading ? "Building your quote…" : "See my delivered price"}
         </button>
         {!compact ? (
           <button
@@ -179,7 +179,7 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
             className="btn btn-ghost w-full sm:w-auto"
             onClick={() => setManual((v) => !v)}
           >
-            {manual ? "Use link only" : "Enter manually"}
+            {manual ? "Use a product link" : "I don’t have a link"}
           </button>
         ) : null}
       </div>

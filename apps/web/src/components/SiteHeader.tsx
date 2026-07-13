@@ -34,29 +34,34 @@ export function SiteHeader({
   return (
     <header className="sticky top-0 z-40 border-b border-black/5 bg-[rgba(247,243,236,0.92)] backdrop-blur-md pt-[var(--safe-top)]">
       <div className="container-bridge flex h-[var(--header-h)] items-center justify-between gap-3">
-        <Link href="/" className="display text-2xl text-[var(--sea-deep)]">
-          Bridge
+        <Link href="/" className="flex items-center gap-2.5 text-[var(--sea-deep)]" aria-label="Bridge home">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-[var(--sea-deep)] text-sm font-black text-[var(--sun)]">B</span>
+          <span className="display text-2xl">Bridge</span>
         </Link>
 
-        <nav className="hidden items-center gap-4 text-sm font-semibold text-[var(--sea-deep)] lg:flex">
-          {MARKETING.slice(0, 7).map((l) => (
+        <nav className="hidden items-center gap-6 text-sm font-bold text-[var(--sea-deep)]/70 lg:flex">
+          {MARKETING.slice(0, 5).map((l) => (
             <Link key={l.href} href={l.href}>
               {l.label}
             </Link>
           ))}
-          <Link href="/app">Shop</Link>
           {isStaff ? <Link href="/admin/console">Admin</Link> : null}
         </nav>
 
         <div className="flex items-center gap-2">
           {userName ? (
             <Link href="/app" className="btn btn-primary hidden min-h-11 px-4 text-sm sm:inline-flex">
-              {userName.split(" ")[0]}
+              My account
             </Link>
           ) : (
-            <Link href="/login" className="btn btn-primary min-h-11 px-4 text-sm">
-              Log in
-            </Link>
+            <>
+              <Link href="/login" className="hidden px-2 text-sm font-bold text-[var(--sea-deep)]/70 sm:block">
+                Log in
+              </Link>
+              <Link href="/#quote" className="btn btn-primary hidden min-h-11 px-4 text-sm sm:inline-flex">
+                Get a quote
+              </Link>
+            </>
           )}
           {!inApp ? (
             <button
@@ -65,7 +70,7 @@ export function SiteHeader({
               aria-label="Open menu"
               onClick={() => setOpen(true)}
             >
-              ☰
+              <span aria-hidden="true" className="text-lg leading-none">☰</span>
             </button>
           ) : null}
         </div>
