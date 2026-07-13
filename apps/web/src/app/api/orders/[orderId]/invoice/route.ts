@@ -1,16 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@bridge/db";
+import { getSessionUser } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ orderId: string }> },
 ) {
+  const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { orderId } = await ctx.params;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { payments: true, address: true, events: true, quote: true },
   });
-  if (!order) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const isOwner = order && (order.customerId === user.id || order.payerId === user.id);
+  const isStaff = user.role === "ADMIN" || user.role === "OPS";
+  if (!order || (!isOwner && !isStaff)) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
 
   const lines = [
     `Bridge Invoice`,

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { prisma } from "@bridge/db";
 import { addOrderEvent, getSessionUser } from "@/lib/auth";
 
 function otp() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(randomInt(100000, 1000000));
 }
 
 export async function POST(

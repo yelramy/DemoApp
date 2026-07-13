@@ -11,9 +11,12 @@
 ## Run
 ```bash
 pnpm install
+cp packages/db/.env.example packages/db/.env
+cp apps/web/.env.example apps/web/.env.local
 pnpm db:generate && pnpm db:push && pnpm db:seed
 pnpm dev
 ```
+- Local SQLite: `packages/db/.env` + `apps/web/.env.local` (from `*.example`; gitignored)
 - http://localhost:3000 · OTP `246810`
 - Customer `+96170123456` · Admin `admin@bridge.lb`
 - Partner login `uae@partner.bridge` / `246810` · API `partner-demo-key`

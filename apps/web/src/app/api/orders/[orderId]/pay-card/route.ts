@@ -7,13 +7,16 @@ export async function POST(
   ctx: { params: Promise<{ orderId: string }> },
 ) {
   const user = await getSessionUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const { orderId } = await ctx.params;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { payments: true },
   });
   if (!order) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  if (user && order.customerId !== user.id && order.payerId !== user.id && user.role === "CUSTOMER") {
+  const isOwner = order.customerId === user.id || order.payerId === user.id;
+  const isStaff = user.role === "ADMIN" || user.role === "OPS";
+  if (!isOwner && !isStaff) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
