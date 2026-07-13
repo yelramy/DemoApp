@@ -36,25 +36,25 @@ export default async function QuotePage({
   const expired = quote.expiresAt < new Date();
 
   return (
-    <div className="container-bridge grid gap-8 py-10 lg:grid-cols-[1fr_0.9fr]">
-      <section className="panel overflow-hidden">
+    <div className="container-bridge grid gap-5 py-5 sm:gap-8 sm:py-8 lg:grid-cols-[1fr_0.9fr] lg:py-10">
+      <section className="panel overflow-hidden order-2 lg:order-1">
         {payload.parsed.imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={payload.parsed.imageUrl}
             alt=""
-            className="h-56 w-full object-cover"
+            className="h-44 w-full object-cover sm:h-56"
           />
         ) : (
-          <div className="flex h-40 items-center justify-center bg-[var(--foam)] text-[var(--sea)]">
+          <div className="flex h-28 items-center justify-center bg-[var(--foam)] text-[var(--sea)] sm:h-40">
             Bridge quote
           </div>
         )}
-        <div className="p-6 md:p-8">
+        <div className="p-4 sm:p-6 md:p-8">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--mist)]">
             {payload.parsed.store} · hub {payload.parsed.hubHint}
           </p>
-          <h1 className="display mb-3 text-3xl text-[var(--sea-deep)]">
+          <h1 className="display mb-3 text-2xl text-[var(--sea-deep)] sm:text-3xl">
             {payload.parsed.title}
           </h1>
           <a
@@ -86,8 +86,10 @@ export default async function QuotePage({
         </div>
       </section>
 
-      <section className="panel p-6 md:p-8">
-        <h2 className="display mb-4 text-2xl text-[var(--sea-deep)]">All-in USD</h2>
+      <section className="panel order-1 p-4 sm:p-6 md:p-8 lg:order-2">
+        <h2 className="display mb-3 text-xl text-[var(--sea-deep)] sm:mb-4 sm:text-2xl">
+          All-in USD
+        </h2>
         <dl className="space-y-2 text-sm">
           {[
             ["Item", quote.itemSubtotal],

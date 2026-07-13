@@ -4,8 +4,8 @@
 **Bridge** — English web product for Lebanon: paste a product link / multi-item cart, get an all-in USD quote, pay with Whish/COD/OMT/card, track delivery. Logistics partnered (UAE/US/TR/CN).
 
 ## Status
-- Branch: `cursor/bridge-build-a9ff`
-- Catalog coverage: sandbox-complete for web product; live PSP/WA/Postgres deferred
+- Branch: `cursor/mobile-first-a9ff` (mobile-first production shell)
+- Base product: merged on `master` (sandbox web catalog complete)
 - Plan docs: `docs/bridge/` · checklist: `docs/bridge/03-FULL-FEATURE-CATALOG.md`
 
 ## Run
@@ -18,16 +18,17 @@ pnpm dev
 - Customer `+96170123456` · Admin `admin@bridge.lb`
 - Partner login `uae@partner.bridge` / `246810` · API `partner-demo-key`
 - Promo `BRIDGE10` · Affiliate `CREATOR1`
+- Health: `GET /api/health`
 - Extension: load unpacked `apps/extension`
 
-## Latest pass (closing catalog gaps)
-- Schema: duties, FX, returns, partner invoices/login, affiliates, observability, tip/deposit/wallet/variant
-- Checkout: wallet credit, COD deposit, tip; quote expiry UI; variants/screenshot/category
-- Orders: ETA, returns, CSAT, tip, payment retry, per-order ticket
-- Suite: abandon/donate/discard; partner auto-match by tracking
-- Partner: login, invoices, rates, discrepancy + idempotent events
-- Diaspora: `/app/payer` multi-currency dashboard
-- Admin: CMS, quote override, affiliates, observability/audit tabs
+## Mobile-first (latest)
+- Bottom tabs on `/app/*`: Shop · Orders · Cart · Account · More sheet
+- Marketing hamburger sheet; sticky header with safe-area
+- Quote: clipboard Paste, options collapsed, full-width CTA
+- Checkout / pay: sticky thumb CTA above tab bar
+- PWA: icons 192/512/180, `sw.js` shell cache, installable manifest (`start_url=/app`)
+- Touch: 48px targets, 16px inputs (no iOS zoom), `viewport-fit=cover`
+- Prod hardening: security headers, `/api/health`, expanded `.env.example`
 
 ## Still live-only
 Real Whish/Tap/WhatsApp credentials, production Postgres/Redis/Nest workers, Arabic UI, native apps, Chrome Web Store publish.

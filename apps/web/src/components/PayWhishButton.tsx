@@ -15,8 +15,8 @@ export function PayWhishButton({ orderId }: { orderId: string }) {
   }
 
   return (
-    <button className="btn btn-primary" disabled={loading} onClick={pay} type="button">
-      {loading ? "Confirming…" : "Simulate Whish pay"}
+    <button className="btn btn-primary w-full" disabled={loading} onClick={pay} type="button">
+      {loading ? "Confirming…" : "Pay with Whish"}
     </button>
   );
 }

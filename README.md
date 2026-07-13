@@ -2,6 +2,8 @@
 
 Shop the world. Pay with Whish. Delivered in Lebanon.
 
+**Phone-first web app** (PWA + bottom tabs). Desktop works; mobile is the primary surface.
+
 ## Quick start
 ```bash
 pnpm install
@@ -13,6 +15,7 @@ pnpm dev
 - OTP (sandbox): `246810`
 - Admin: `admin@bridge.lb`
 - Customer demo: `+96170123456`
+- Health: `/api/health`
 
 ## Docs
 - [`PROJECT_MAP.md`](./PROJECT_MAP.md) — repo map
