@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@bridge/db";
 import { getSessionUser } from "@/lib/auth";
@@ -20,11 +21,16 @@ export default async function AdminPage() {
 
   return (
     <div className="container-bridge space-y-8 py-10">
-      <div>
-        <h1 className="display text-4xl text-[var(--sea-deep)]">Admin</h1>
-        <p className="text-sm text-[var(--ink)]/65">
-          Buy queue and order board · signed in as {user.email ?? user.phone}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="display text-4xl text-[var(--sea-deep)]">Admin</h1>
+          <p className="text-sm text-[var(--ink)]/65">
+            Buy queue and order board · {user.email ?? user.phone}
+          </p>
+        </div>
+        <Link href="/admin/ops" className="btn btn-ghost text-sm">
+          Ops / analytics
+        </Link>
       </div>
 
       <section className="panel p-6">

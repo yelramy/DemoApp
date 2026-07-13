@@ -3,6 +3,7 @@ import { prisma } from "@bridge/db";
 import { getSessionUser } from "@/lib/auth";
 import { money, STATUS_LABELS } from "@/lib/format";
 import { PayWhishButton } from "@/components/PayWhishButton";
+import { OrderActions } from "@/components/OrderActions";
 
 export default async function OrderDetailPage({
   params,
@@ -21,6 +22,9 @@ export default async function OrderDetailPage({
       events: { orderBy: { createdAt: "asc" } },
       payments: true,
       address: true,
+      claims: true,
+      review: true,
+      weightAdjustments: true,
     },
   });
   if (!order || (order.customerId !== user.id && user.role === "CUSTOMER")) {
@@ -29,7 +33,13 @@ export default async function OrderDetailPage({
 
   const needsWhish =
     order.paymentMethod === "WHISH" &&
-    order.payments.some((p) => p.status !== "PAID");
+    order.payments.every((p) => p.status !== "PAID");
+  const needsCard =
+    order.paymentMethod === "CARD" &&
+    order.payments.every((p) => p.status !== "PAID");
+  const photos: string[] = order.hubPhotoUrls
+    ? JSON.parse(order.hubPhotoUrls)
+    : [];
 
   return (
     <div className="container-bridge grid gap-8 py-10 lg:grid-cols-[1fr_0.85fr]">
@@ -60,15 +70,55 @@ export default async function OrderDetailPage({
                 : "—"}
             </dd>
           </div>
+          <div>
+            <dt className="text-[var(--ink)]/55">Weight</dt>
+            <dd className="font-bold">
+              quoted {order.quotedWeightKg ?? "—"} kg
+              {order.finalWeightKg ? ` · final ${order.finalWeightKg} kg` : ""}
+            </dd>
+          </div>
         </dl>
+        {order.giftNote ? (
+          <p className="mt-4 rounded-xl bg-[var(--sand)] p-3 text-sm">
+            Gift note: {order.giftNote}
+          </p>
+        ) : null}
+        {order.weightAdjustments.length > 0 ? (
+          <div className="mt-4 rounded-xl bg-[var(--sand)] p-3 text-sm">
+            Weight adjustments:{" "}
+            {order.weightAdjustments
+              .map((w) => `$${w.extraUsd} (${w.status})`)
+              .join(", ")}
+          </div>
+        ) : null}
+        {photos.length > 0 ? (
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            {photos.map((src) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={src} src={src} alt="Hub intake" className="rounded-xl" />
+            ))}
+          </div>
+        ) : null}
         {(needsWhish || sp.pay === "whish") && (
           <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
-            <p className="mb-3 text-sm">
-              Complete Whish payment to start buying your item.
-            </p>
+            <p className="mb-3 text-sm">Complete Whish payment to start buying.</p>
             <PayWhishButton orderId={order.id} />
           </div>
         )}
+        {(needsCard || sp.pay === "card") && (
+          <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
+            <p className="mb-3 text-sm">Complete card sandbox payment.</p>
+            <OrderActions orderId={order.id} mode="card" />
+          </div>
+        )}
+        <div className="mt-6">
+          <OrderActions
+            orderId={order.id}
+            mode="actions"
+            canClaim={["delivered", "completed"].includes(order.status)}
+            canReview={["delivered", "completed"].includes(order.status) && !order.review}
+          />
+        </div>
       </section>
       <section className="panel p-6 md:p-8">
         <h2 className="display mb-4 text-2xl text-[var(--sea-deep)]">Timeline</h2>

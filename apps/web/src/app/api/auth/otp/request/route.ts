@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@bridge/db";
-import { suiteCode } from "@/lib/auth";
+import { referralCode, suiteCode } from "@/lib/auth";
 
 const DEMO_OTP = process.env.DEMO_OTP_CODE ?? "246810";
 
@@ -25,10 +25,36 @@ export async function POST(req: Request) {
         email: body.email ? target : null,
         name: body.name ?? null,
         suiteCode: suiteCode(),
+        referralCode: referralCode(),
         role: target === "admin@bridge.lb" ? "ADMIN" : "CUSTOMER",
         wallet: { create: { balanceUsd: 0 } },
       },
     });
+
+    if (body.referralCode) {
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode: String(body.referralCode).toUpperCase() },
+      });
+      if (referrer && referrer.id !== user.id) {
+        await prisma.referralRedemption.create({
+          data: {
+            referrerId: referrer.id,
+            refereeId: user.id,
+            creditUsd: 5,
+          },
+        });
+        await prisma.wallet.upsert({
+          where: { userId: referrer.id },
+          update: { balanceUsd: { increment: 5 } },
+          create: { userId: referrer.id, balanceUsd: 5 },
+        });
+        await prisma.wallet.upsert({
+          where: { userId: user.id },
+          update: { balanceUsd: { increment: 5 } },
+          create: { userId: user.id, balanceUsd: 5 },
+        });
+      }
+    }
   }
 
   await prisma.otpChallenge.create({

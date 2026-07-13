@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-function suiteCode() {
-  return `BRG-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+function code(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 }
 
 async function main() {
@@ -11,7 +11,9 @@ async function main() {
     { key: "whish_payments", enabled: true, note: "Sandbox simulated" },
     { key: "cod_payments", enabled: true, note: null },
     { key: "diaspora_split_pay", enabled: true, note: null },
-    { key: "browser_extension", enabled: false, note: null },
+    { key: "browser_extension", enabled: true, note: "Bookmarklet + guide" },
+    { key: "card_payments", enabled: true, note: "Sandbox card" },
+    { key: "abandoned_quote_nudge", enabled: true, note: null },
   ];
   for (const flag of flags) {
     await prisma.featureFlag.upsert({
@@ -21,46 +23,69 @@ async function main() {
     });
   }
 
-  const rates = [
-    {
-      hub: "UAE",
-      method: "air_express",
-      pricePerKg: 12,
-      minCharge: 15,
-      handlingPerParcel: 3,
-      volumetricDivisor: 5000,
-    },
-    {
-      hub: "US",
-      method: "air_express",
-      pricePerKg: 18,
-      minCharge: 22,
-      handlingPerParcel: 4,
-      volumetricDivisor: 5000,
-    },
-  ];
-  for (const rate of rates) {
+  for (const rate of [
+    { hub: "UAE", method: "air_express", pricePerKg: 12, minCharge: 15, handlingPerParcel: 3, volumetricDivisor: 5000 },
+    { hub: "US", method: "air_express", pricePerKg: 18, minCharge: 22, handlingPerParcel: 4, volumetricDivisor: 5000 },
+    { hub: "TR", method: "air_express", pricePerKg: 11, minCharge: 14, handlingPerParcel: 3, volumetricDivisor: 5000 },
+    { hub: "CN", method: "air_economy", pricePerKg: 9, minCharge: 12, handlingPerParcel: 2.5, volumetricDivisor: 5000 },
+  ]) {
     const existing = await prisma.rateCardConfig.findFirst({
       where: { hub: rate.hub, method: rate.method },
     });
-    if (existing) {
-      await prisma.rateCardConfig.update({
-        where: { id: existing.id },
-        data: rate,
-      });
-    } else {
-      await prisma.rateCardConfig.create({ data: rate });
-    }
+    if (existing) await prisma.rateCardConfig.update({ where: { id: existing.id }, data: rate });
+    else await prisma.rateCardConfig.create({ data: rate });
   }
 
-  const partner = await prisma.partnerOrg.upsert({
+  await prisma.partnerOrg.upsert({
     where: { apiKey: "partner-demo-key" },
-    update: { name: "Demo UAE Hub", active: true },
+    update: { name: "Demo UAE Hub", hub: "UAE", active: true },
     create: {
       name: "Demo UAE Hub",
       hub: "UAE",
       contact: "ops@demo-hub.ae",
       apiKey: "partner-demo-key",
+    },
+  });
+
+  await prisma.partnerOrg.upsert({
+    where: { apiKey: "partner-us-demo-key" },
+    update: { name: "Demo US Hub", hub: "US", active: true },
+    create: {
+      name: "Demo US Hub",
+      hub: "US",
+      contact: "ops@demo-hub.us",
+      apiKey: "partner-us-demo-key",
+    },
+  });
+
+  for (const kw of ["weapon", "ammunition", "counterfeit", "cannabis", "vape liquid"]) {
+    await prisma.bannedKeyword.upsert({
+      where: { keyword: kw },
+      update: {},
+      create: { keyword: kw, severity: "block", note: "Airline/customs ban" },
+    });
+  }
+
+  for (const area of [
+    { city: "Beirut", area: "Achrafieh", codAllowed: true, codMaxUsd: 300 },
+    { city: "Beirut", area: "Hamra", codAllowed: true, codMaxUsd: 300 },
+    { city: "Tripoli", area: "Center", codAllowed: true, codMaxUsd: 200 },
+    { city: "Saida", area: "Center", codAllowed: true, codMaxUsd: 150 },
+  ]) {
+    const existing = await prisma.deliveryArea.findFirst({
+      where: { city: area.city, area: area.area },
+    });
+    if (!existing) await prisma.deliveryArea.create({ data: area });
+  }
+
+  await prisma.promoCode.upsert({
+    where: { code: "BRIDGE10" },
+    update: { discountUsd: 10, active: true },
+    create: {
+      code: "BRIDGE10",
+      discountUsd: 10,
+      maxUses: 1000,
+      active: true,
     },
   });
 
@@ -72,21 +97,21 @@ async function main() {
       name: "Bridge Admin",
       role: "ADMIN",
       phone: "+96170000001",
-      suiteCode: suiteCode(),
+      suiteCode: code("BRG"),
+      referralCode: code("REF"),
     },
   });
 
-  const existingCustomer = await prisma.user.findUnique({
-    where: { phone: "+96170123456" },
-  });
-  if (!existingCustomer) {
+  const customer = await prisma.user.findUnique({ where: { phone: "+96170123456" } });
+  if (!customer) {
     await prisma.user.create({
       data: {
         phone: "+96170123456",
         name: "Maya Khoury",
         role: "CUSTOMER",
         email: "maya@example.com",
-        suiteCode: suiteCode(),
+        suiteCode: code("BRG"),
+        referralCode: code("REF"),
         addresses: {
           create: {
             label: "Home",
@@ -99,12 +124,74 @@ async function main() {
             isDefault: true,
           },
         },
-        wallet: { create: { balanceUsd: 0 } },
+        wallet: { create: { balanceUsd: 5 } },
       },
     });
   }
 
-  console.log("Seeded partner", partner.id);
+  const catalog = [
+    {
+      slug: "vitamin-c-serum",
+      title: "Brightening Vitamin C Serum",
+      description: "Popular beauty staple with locked UAE landed price.",
+      category: "beauty",
+      hub: "UAE",
+      landedPriceUsd: 48,
+      weightKg: 0.4,
+      sourceUrl: "https://www.noon.com/",
+    },
+    {
+      slug: "omega-3-softgels",
+      title: "Omega-3 Softgels 120ct",
+      description: "Supplement restock with transparent all-in pricing.",
+      category: "supplements",
+      hub: "US",
+      landedPriceUsd: 62,
+      weightKg: 0.6,
+      sourceUrl: "https://www.iherb.com/",
+    },
+    {
+      slug: "everyday-sneakers",
+      title: "Everyday Knit Sneakers",
+      description: "Fashion soft goods from UAE hub.",
+      category: "fashion",
+      hub: "UAE",
+      landedPriceUsd: 89,
+      weightKg: 1.1,
+      sourceUrl: "https://www.amazon.ae/",
+    },
+  ];
+  for (const p of catalog) {
+    await prisma.catalogProduct.upsert({
+      where: { slug: p.slug },
+      update: p,
+      create: p,
+    });
+  }
+
+  const posts = [
+    {
+      slug: "ship-amazon-to-lebanon",
+      title: "How to shop Amazon for Lebanon without a US card",
+      excerpt: "Use Bridge for all-in USD quotes and Whish checkout.",
+      body: "Lebanese cards often fail on foreign sites. Bridge buys through partner hubs, shows customs estimates, and lets you pay with Whish or COD.",
+    },
+    {
+      slug: "whish-international-shopping",
+      title: "Pay with Whish for international shopping",
+      excerpt: "Local rails for global products.",
+      body: "Whish is Bridge’s primary rail. After you confirm an all-in quote, sandbox (and later live) Whish payment releases the buy queue.",
+    },
+  ];
+  for (const post of posts) {
+    await prisma.blogPost.upsert({
+      where: { slug: post.slug },
+      update: post,
+      create: post,
+    });
+  }
+
+  console.log("Seed complete");
 }
 
 main()

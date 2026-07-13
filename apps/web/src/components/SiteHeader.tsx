@@ -8,10 +8,12 @@ export async function SiteHeader() {
       <Link href="/" className="display text-2xl text-[var(--sea-deep)]">
         Bridge
       </Link>
-      <nav className="hidden items-center gap-5 text-sm font-semibold text-[var(--sea-deep)] md:flex">
+      <nav className="hidden items-center gap-4 text-sm font-semibold text-[var(--sea-deep)] lg:flex">
         <Link href="/how-it-works">How it works</Link>
         <Link href="/pricing">Pricing</Link>
+        <Link href="/catalog">Catalog</Link>
         <Link href="/pay-for-family">Pay for family</Link>
+        <Link href="/blog">Guides</Link>
         <Link href="/app">Shop</Link>
         {user?.role === "ADMIN" || user?.role === "OPS" ? (
           <Link href="/admin">Admin</Link>
