@@ -65,19 +65,121 @@ function toUsd(price: number | null, currency: string | null) {
   return price;
 }
 
+function extractJsonLdProduct(html: string): {
+  title?: string;
+  price?: string;
+  currency?: string;
+  imageUrl?: string;
+} | null {
+  const blocks = html.matchAll(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+  for (const block of blocks) {
+    try {
+      const data = JSON.parse(block[1]);
+      const nodes: unknown[] = Array.isArray(data)
+        ? data
+        : Array.isArray((data as { "@graph"?: unknown[] })["@graph"])
+          ? (data as { "@graph": unknown[] })["@graph"]
+          : [data];
+      for (const node of nodes) {
+        const n = node as {
+          "@type"?: string | string[];
+          name?: string;
+          image?: string | string[];
+          offers?:
+            | { price?: string | number; priceCurrency?: string }
+            | Array<{ price?: string | number; priceCurrency?: string }>;
+        };
+        const type = Array.isArray(n["@type"]) ? n["@type"] : [n["@type"]];
+        if (!type.includes("Product")) continue;
+        const offer = Array.isArray(n.offers) ? n.offers[0] : n.offers;
+        return {
+          title: n.name,
+          price: offer?.price != null ? String(offer.price) : undefined,
+          currency: offer?.priceCurrency,
+          imageUrl: Array.isArray(n.image) ? n.image[0] : n.image,
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function extractStorePrice(html: string): string | null {
+  // Amazon buy-box markup; first a-offscreen span carries "AED49.00" style text
+  const offscreen = html.match(
+    /class="a-offscreen">\s*((?:AED|USD|EUR|SAR|\$|€)\s?[\d.,]+)\s*</,
+  );
+  if (offscreen) return offscreen[1];
+  const priceAmount = html.match(/"priceAmount"\s*:\s*([\d.]+)/);
+  const priceCurrency = html.match(/"currencyCode"\s*:\s*"([A-Z]{3})"/);
+  if (priceAmount) {
+    return `${priceCurrency?.[1] ?? ""} ${priceAmount[1]}`;
+  }
+  return null;
+}
+
+function assertSafeUrl(raw: string | URL): URL {
+  const parsedUrl = new URL(raw);
+  if (parsedUrl.protocol !== "https:") {
+    throw new Error("Only HTTPS product URLs are supported");
+  }
+  const hostname = parsedUrl.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname.endsWith(".local") ||
+    /^(10|127)\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^169\.254\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+  ) {
+    throw new Error("Private network URLs are not supported");
+  }
+  return parsedUrl;
+}
+
+async function fetchWithSafeRedirects(startUrl: URL, maxHops = 3) {
+  let current = startUrl;
+  for (let hop = 0; hop <= maxHops; hop++) {
+    const res = await fetch(current.toString(), {
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+        "sec-fetch-dest": "document",
+        "sec-fetch-mode": "navigate",
+        "sec-fetch-site": "none",
+        "upgrade-insecure-requests": "1",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    const location = res.headers.get("location");
+    if (res.status >= 300 && res.status < 400 && location) {
+      current = assertSafeUrl(new URL(location, current));
+      continue;
+    }
+    return { res, finalUrl: current };
+  }
+  throw new Error("Too many redirects");
+}
+
 export async function parseProductUrl(url: string): Promise<ParsedProduct> {
-  const { store, hubHint } = detectStore(url);
+  const parsedUrl = assertSafeUrl(url);
+
+  let normalizedUrl = parsedUrl.toString();
   let html = "";
   let fetchOk = false;
   try {
-    const res = await fetch(url, {
-      headers: {
-        "user-agent":
-          "Mozilla/5.0 (compatible; BridgeBot/1.0; +https://bridge.lb)",
-        accept: "text/html",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
+    const { res, finalUrl } = await fetchWithSafeRedirects(parsedUrl);
+    normalizedUrl = finalUrl.toString();
     if (res.ok) {
       html = await res.text();
       fetchOk = true;
@@ -85,31 +187,49 @@ export async function parseProductUrl(url: string): Promise<ParsedProduct> {
   } catch {
     fetchOk = false;
   }
+  const { store, hubHint } = detectStore(normalizedUrl);
 
+  const botBlocked =
+    fetchOk &&
+    /captcha|robot check|are you a human|access denied|automated access/i.test(
+      html.slice(0, 4000),
+    );
+  if (botBlocked) {
+    fetchOk = false;
+    html = "";
+  }
+
+  const ldProduct = extractJsonLdProduct(html);
   const title =
+    ldProduct?.title ||
     extractMeta(html, "og:title") ||
     html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() ||
     "Product from link";
-  const imageUrl = extractMeta(html, "og:image");
+  const imageUrl = ldProduct?.imageUrl ?? extractMeta(html, "og:image");
   const priceMeta =
-    extractMeta(html, "product:price:amount") ||
+    ldProduct?.price ??
+    extractMeta(html, "product:price:amount") ??
     extractMeta(html, "og:price:amount");
-  const currencyMeta = extractMeta(html, "product:price:currency");
+  const currencyMeta =
+    ldProduct?.currency ?? extractMeta(html, "product:price:currency");
+  const storePrice = priceMeta ? null : extractStorePrice(html);
   const parsed = parsePrice(
     priceMeta
       ? `${currencyMeta ?? ""} ${priceMeta}`
-      : extractMeta(html, "og:description"),
+      : (storePrice ?? extractMeta(html, "og:description")),
   );
 
   const priceUsd = toUsd(parsed.price, parsed.currency ?? currencyMeta);
   const confidence = fetchOk
     ? priceUsd
-      ? 0.75
+      ? ldProduct?.price
+        ? 0.85
+        : 0.75
       : 0.45
     : 0.2;
 
   return {
-    url,
+    url: normalizedUrl,
     store,
     title: title.slice(0, 200),
     priceUsd,

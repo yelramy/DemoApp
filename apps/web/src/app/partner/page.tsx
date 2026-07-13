@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Batch = {
   id: string;
@@ -35,7 +35,7 @@ export default function PartnerPage() {
   const [code, setCode] = useState("246810");
   const [partnerName, setPartnerName] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     const headers = { "x-api-key": apiKey };
     const [b, e, inv] = await Promise.all([
       fetch("/api/partner/batches", { headers }).then((r) => r.json()),
@@ -45,7 +45,7 @@ export default function PartnerPage() {
     setBatches(b.batches || []);
     setExpected(e.expected || []);
     setInvoices(inv.invoices || []);
-  }
+  }, [apiKey]);
 
   useEffect(() => {
     fetch("/api/partner/login")
@@ -60,7 +60,7 @@ export default function PartnerPage() {
 
   useEffect(() => {
     refresh();
-  }, [apiKey]);
+  }, [refresh]);
 
   async function login(e: React.FormEvent) {
     e.preventDefault();

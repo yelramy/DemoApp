@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function AdminConsolePage() {
   const [tab, setTab] = useState<
@@ -35,7 +35,7 @@ export default function AdminConsolePage() {
   const [blogTitle, setBlogTitle] = useState("");
   const [affCode, setAffCode] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (tab === "kanban")
       setKanban((await (await fetch("/api/admin/kanban")).json()).columns || {});
     if (tab === "users")
@@ -48,11 +48,11 @@ export default function AdminConsolePage() {
       setAffiliates((await (await fetch("/api/affiliates")).json()).links || []);
     }
     if (tab === "ops") setObs(await (await fetch("/api/observability")).json());
-  }
+  }, [tab]);
 
   useEffect(() => {
     load();
-  }, [tab]);
+  }, [load]);
 
   return (
     <div className="container-bridge py-10">

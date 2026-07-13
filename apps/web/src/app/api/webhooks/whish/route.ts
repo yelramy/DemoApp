@@ -1,11 +1,21 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@bridge/db";
 import { addOrderEvent } from "@/lib/auth";
 
+function secretMatches(provided: string | null, expected: string | undefined) {
+  if (!provided || !expected) return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function POST(req: Request) {
   const body = await req.json();
-  const secret = req.headers.get("x-whish-secret");
-  if (secret !== (process.env.WHISH_WEBHOOK_SECRET ?? "dev-whish-secret")) {
+  const expected =
+    process.env.WHISH_WEBHOOK_SECRET ??
+    (process.env.NODE_ENV !== "production" ? "dev-whish-secret" : undefined);
+  if (!secretMatches(req.headers.get("x-whish-secret"), expected)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

@@ -14,6 +14,19 @@ export async function POST(req: Request) {
     );
   }
 
+  const recentCount = await prisma.otpChallenge.count({
+    where: {
+      target,
+      createdAt: { gt: new Date(Date.now() - 10 * 60 * 1000) },
+    },
+  });
+  if (recentCount >= 5) {
+    return NextResponse.json(
+      { error: { code: "RATE_LIMITED", message: "Too many OTP requests; try again later" } },
+      { status: 429 },
+    );
+  }
+
   let user = body.phone
     ? await prisma.user.findUnique({ where: { phone: target } })
     : await prisma.user.findUnique({ where: { email: target } });
@@ -66,9 +79,10 @@ export async function POST(req: Request) {
     },
   });
 
+  const isSandbox = process.env.NODE_ENV !== "production" || !!process.env.DEMO_OTP_CODE;
   return NextResponse.json({
     ok: true,
-    demoCode: DEMO_OTP,
-    message: "OTP sent (sandbox: use demo code)",
+    ...(isSandbox ? { demoCode: DEMO_OTP } : {}),
+    message: isSandbox ? "OTP sent (sandbox: use demo code)" : "OTP sent",
   });
 }

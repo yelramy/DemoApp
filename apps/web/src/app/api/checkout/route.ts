@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { prisma, PaymentMethod } from "@bridge/db";
 import {
   addOrderEvent,
@@ -30,6 +31,26 @@ export async function POST(req: Request) {
   if (!quote || quote.expiresAt < new Date()) {
     return NextResponse.json(
       { error: { code: "QUOTE_EXPIRED", message: "Quote expired. Refresh it." } },
+      { status: 400 },
+    );
+  }
+  if (quote.userId && quote.userId !== user.id) {
+    return NextResponse.json(
+      { error: { code: "FORBIDDEN", message: "This quote belongs to another account" } },
+      { status: 403 },
+    );
+  }
+  const priorOrder = await prisma.order.findFirst({ where: { quoteId: quote.id } });
+  if (priorOrder) {
+    return NextResponse.json(
+      { error: { code: "QUOTE_USED", message: "This quote was already checked out" } },
+      { status: 409 },
+    );
+  }
+  const tipUsd = Number(body.tipUsd || 0);
+  if (!Number.isFinite(tipUsd) || tipUsd < 0 || tipUsd > 500) {
+    return NextResponse.json(
+      { error: { code: "BAD_TIP", message: "Invalid tip amount" } },
       { status: 400 },
     );
   }
@@ -126,7 +147,7 @@ export async function POST(req: Request) {
       publicId: publicOrderId(),
       status: "awaiting_payment",
       customerId: user.id,
-      payerId: body.payerId || user.id,
+      payerId: user.id,
       addressId,
       quoteId: quote.id,
       partnerId: partner?.id,
@@ -137,7 +158,7 @@ export async function POST(req: Request) {
       itemImage: payload.parsed.imageUrl ?? null,
       quotedWeightKg: quote.chargeableKg,
       giftNote: body.giftNote ?? null,
-      tipUsd: Number(body.tipUsd || 0),
+      tipUsd,
       depositUsd,
       walletCreditApplied: walletCredit,
       variantLabel: body.variantLabel || payload.parsed.variantLabel || null,
@@ -148,10 +169,18 @@ export async function POST(req: Request) {
   });
 
   if (walletCredit > 0) {
-    await prisma.wallet.update({
-      where: { userId: user.id },
+    // guard against concurrent checkouts draining the wallet below zero
+    const debited = await prisma.wallet.updateMany({
+      where: { userId: user.id, balanceUsd: { gte: walletCredit } },
       data: { balanceUsd: { decrement: walletCredit } },
     });
+    if (debited.count === 0) {
+      await prisma.order.delete({ where: { id: order.id } });
+      return NextResponse.json(
+        { error: { code: "WALLET_CHANGED", message: "Wallet balance changed. Try again." } },
+        { status: 409 },
+      );
+    }
     await postLedger(order.id, "wallet", walletCredit, 0, "Wallet credit applied");
   }
 
@@ -181,7 +210,7 @@ export async function POST(req: Request) {
       orderId: order.id,
       method,
       status: method === "COD" ? "REQUIRES_ACTION" : "PENDING",
-      amountUsd: method === "COD" && depositUsd > 0 ? depositUsd : chargeTotal + Number(body.tipUsd || 0),
+      amountUsd: method === "COD" && depositUsd > 0 ? depositUsd : chargeTotal + tipUsd,
       checkoutUrl:
         method === "WHISH"
           ? `/app/checkout/${order.id}/whish`
@@ -210,7 +239,7 @@ export async function POST(req: Request) {
   }
 
   if (body.createPayLink) {
-    const token = `pay_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+    const token = `pay_${randomBytes(18).toString("base64url")}`;
     await prisma.payLink.create({
       data: {
         token,

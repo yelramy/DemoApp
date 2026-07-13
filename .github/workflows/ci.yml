@@ -16,13 +16,16 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install
-      - run: pnpm --filter @bridge/pricing test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
       - run: pnpm --filter @bridge/db exec prisma generate
+      - run: pnpm test
+      - run: pnpm lint
       - name: Prepare SQLite
         run: |
-          echo 'DATABASE_URL="file:./prisma/ci.db"' > packages/db/.env
-          echo 'DATABASE_URL="file:../../packages/db/prisma/ci.db"' > apps/web/.env.local
+          # SQLite URLs resolve relative to schema.prisma; web needs an absolute path
+          echo 'DATABASE_URL="file:./ci.db"' > packages/db/.env
+          echo "DATABASE_URL=\"file:${GITHUB_WORKSPACE}/packages/db/prisma/ci.db\"" > apps/web/.env.local
           echo 'DEMO_OTP_CODE=246810' >> apps/web/.env.local
           echo 'WHISH_WEBHOOK_SECRET=dev-whish-secret' >> apps/web/.env.local
           cd packages/db && pnpm exec prisma db push && pnpm exec tsx prisma/seed.ts

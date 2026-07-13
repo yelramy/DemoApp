@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 import { prisma } from "@bridge/db";
 import { getSessionUser } from "@/lib/auth";
 
@@ -13,7 +14,7 @@ export async function POST(req: Request) {
   if (!payload) {
     return NextResponse.json({ error: "empty" }, { status: 400 });
   }
-  const token = `cart_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+  const token = `cart_${randomBytes(18).toString("base64url")}`;
   const share = await prisma.sharedCart.create({
     data: {
       token,

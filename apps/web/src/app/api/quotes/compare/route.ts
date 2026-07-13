@@ -1,6 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@bridge/db";
-import { getSessionUser } from "@/lib/auth";
 import { computeQuote, loadPricingConfig } from "@/lib/pricing";
 import type { HubCode } from "@bridge/pricing";
 
