@@ -18,9 +18,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm audit --prod --audit-level high
+      - run: pnpm --filter @bridge/db exec prisma generate
       - run: pnpm test
       - run: pnpm lint
-      - run: pnpm --filter @bridge/db exec prisma generate
       - name: Prepare SQLite
         run: |
           # SQLite URLs resolve relative to schema.prisma; web needs an absolute path
