@@ -1,0 +1,29 @@
+name: Bridge CI
+
+on:
+  push:
+    branches: ["cursor/**", "master", "main"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # version comes from package.json "packageManager" (pnpm@9.15.0)
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install
+      - run: pnpm --filter @bridge/pricing test
+      - run: pnpm --filter @bridge/db exec prisma generate
+      - name: Prepare SQLite
+        run: |
+          echo 'DATABASE_URL="file:./prisma/ci.db"' > packages/db/.env
+          echo 'DATABASE_URL="file:../../packages/db/prisma/ci.db"' > apps/web/.env.local
+          echo 'DEMO_OTP_CODE=246810' >> apps/web/.env.local
+          echo 'WHISH_WEBHOOK_SECRET=dev-whish-secret' >> apps/web/.env.local
+          cd packages/db && pnpm exec prisma db push && pnpm exec tsx prisma/seed.ts
+      - run: pnpm --filter @bridge/web build

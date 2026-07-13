@@ -1,0 +1,620 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  OPS
+  PARTNER
+}
+
+enum OrderStatus {
+  draft
+  quoted
+  awaiting_payment
+  paid
+  buy_in_progress
+  purchased
+  awaiting_inbound
+  received_at_hub
+  on_hold_hub
+  consolidated
+  in_transit_to_lebanon
+  customs_clearance
+  customs_hold
+  out_for_delivery
+  delivered
+  completed
+  cancelled
+  refund_pending
+  refunded
+  claim_open
+  claim_resolved
+  failed
+}
+
+enum PaymentMethod {
+  WHISH
+  COD
+  OMT
+  CARD
+  CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  phone         String?   @unique
+  email         String?   @unique
+  name          String?
+  role          UserRole  @default(CUSTOMER)
+  suiteCode     String    @unique
+  referralCode  String    @unique
+  riskScore     Float     @default(0)
+  codFails      Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  addresses     Address[]
+  orders        Order[]   @relation("OrderCustomer")
+  paidOrders    Order[]   @relation("OrderPayer")
+  sessions      Session[]
+  otpChallenges OtpChallenge[]
+  tickets       Ticket[]
+  wallet        Wallet?
+  familyAsOwner FamilyMember[] @relation("FamilyOwner")
+  familyAsMember FamilyMember[] @relation("FamilyMemberUser")
+  expectedParcels ExpectedParcel[]
+  reviews       Review[]
+  payLinksPaid  PayLink[] @relation("PayLinkPayer")
+  essentials    EssentialsList[]
+  notifications NotificationLog[]
+  referralsMade ReferralRedemption[] @relation("Referrer")
+  referralsUsed ReferralRedemption[] @relation("Referee")
+  preferredPayment String @default("WHISH")
+  notifyWhatsApp Boolean @default(true)
+  notifyEmail    Boolean @default(true)
+  notifySms      Boolean @default(false)
+  kycStatus      String  @default("none")
+  kycDocumentUrl String?
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
+  auditLogs      AuditLog[] @relation("AuditActor")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OtpChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  target    String
+  code      String
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String  @default("Home")
+  fullName  String
+  phone     String
+  city      String
+  area      String
+  street    String
+  building  String?
+  notes     String?
+  isDefault Boolean @default(false)
+  orders    Order[]
+}
+
+model PartnerOrg {
+  id        String          @id @default(cuid())
+  name      String
+  hub       String          @default("UAE")
+  contact   String?
+  apiKey    String?         @unique
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  orders    Order[]
+  events    PartnerEvent[]
+  batches   ShipmentBatch[]
+  manifests Manifest[]
+  invoices  PartnerInvoice[]
+  loginEmail String?        @unique
+  loginCode  String?
+}
+
+model Quote {
+  id              String    @id @default(cuid())
+  userId          String?
+  hub             String
+  method          String
+  currency        String    @default("USD")
+  itemSubtotal    Float
+  buyFee          Float
+  chargeableKg    Float
+  shipping        Float
+  customsEstimate Float
+  paymentFee      Float
+  discount        Float     @default(0)
+  total           Float
+  bridgeTake      Float
+  marginOk        Boolean
+  promoCode       String?
+  expiresAt       DateTime
+  abandonedNudgeAt DateTime?
+  overrideReason  String?
+  overrideById    String?
+  payloadJson     String
+  createdAt       DateTime  @default(now())
+  order           Order?
+}
+
+model Order {
+  id               String         @id @default(cuid())
+  publicId         String         @unique
+  status           OrderStatus    @default(awaiting_payment)
+  customerId       String
+  customer         User           @relation("OrderCustomer", fields: [customerId], references: [id])
+  payerId          String?
+  payer            User?          @relation("OrderPayer", fields: [payerId], references: [id])
+  addressId        String?
+  address          Address?       @relation(fields: [addressId], references: [id])
+  quoteId          String?        @unique
+  quote            Quote?         @relation(fields: [quoteId], references: [id])
+  partnerId        String?
+  partner          PartnerOrg?    @relation(fields: [partnerId], references: [id])
+  batchId          String?
+  batch            ShipmentBatch? @relation(fields: [batchId], references: [id])
+  paymentMethod    PaymentMethod
+  totalUsd         Float
+  itemTitle        String
+  itemUrl          String
+  itemImage        String?
+  retailerOrderId  String?
+  retailerTrack    String?
+  hubTracking      String?
+  hubPhotoUrls     String?
+  quotedWeightKg   Float?
+  finalWeightKg    Float?
+  notes            String?
+  giftNote         String?
+  deliveryOtp      String?
+  deliveryProofUrl String?
+  etaDaysMin       Int?
+  etaDaysMax       Int?
+  tipUsd           Float?         @default(0)
+  depositUsd       Float?         @default(0)
+  walletCreditApplied Float?      @default(0)
+  variantLabel     String?
+  screenshotUrl    String?
+  returnStatus     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  events           OrderEvent[]
+  payments         PaymentIntent[]
+  claims           Claim[]
+  tickets          Ticket[]
+  weightAdjustments WeightAdjustment[]
+  payLinks         PayLink[]
+  review           Review?
+  ledgerEntries    LedgerEntry[]
+  csatScore        Int?
+  returns          ReturnRequest[]
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
+}
+
+model PaymentIntent {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  amountUsd   Float
+  providerRef String?
+  checkoutUrl String?
+  rawJson     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PartnerEvent {
+  id          String     @id @default(cuid())
+  partnerId   String
+  partner     PartnerOrg @relation(fields: [partnerId], references: [id])
+  orderId     String?
+  eventType   String
+  eventKey    String?    @unique
+  payloadJson String
+  createdAt   DateTime   @default(now())
+}
+
+model Claim {
+  id         String    @id @default(cuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason     String
+  details    String?
+  photoUrls  String?
+  status     String    @default("open")
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+model Ticket {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  orderId   String?
+  order     Order?          @relation(fields: [orderId], references: [id])
+  subject   String
+  channel   String          @default("in_app")
+  status    String          @default("open")
+  createdAt DateTime        @default(now())
+  messages  TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balanceUsd Float    @default(0)
+}
+
+model FeatureFlag {
+  key     String  @id
+  enabled Boolean @default(false)
+  note    String?
+}
+
+model RateCardConfig {
+  id                String  @id @default(cuid())
+  hub               String
+  method            String
+  pricePerKg        Float
+  minCharge         Float
+  handlingPerParcel Float
+  volumetricDivisor Float   @default(5000)
+  active            Boolean @default(true)
+}
+
+model PromoCode {
+  id            String    @id @default(cuid())
+  code          String    @unique
+  discountUsd   Float     @default(0)
+  discountPct   Float     @default(0)
+  maxUses       Int       @default(100)
+  usedCount     Int       @default(0)
+  active        Boolean   @default(true)
+  expiresAt     DateTime?
+}
+
+model BannedKeyword {
+  id        String @id @default(cuid())
+  keyword   String @unique
+  severity  String @default("block")
+  note      String?
+}
+
+model DeliveryArea {
+  id          String  @id @default(cuid())
+  city        String
+  area        String
+  codAllowed  Boolean @default(true)
+  codMaxUsd   Float   @default(250)
+  active      Boolean @default(true)
+}
+
+model NotificationLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  channel   String
+  template  String
+  payload   String
+  createdAt DateTime @default(now())
+}
+
+model WeightAdjustment {
+  id           String   @id @default(cuid())
+  orderId      String
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  quotedKg     Float
+  finalKg      Float
+  extraUsd     Float
+  status       String   @default("due")
+  createdAt    DateTime @default(now())
+}
+
+model LedgerEntry {
+  id        String   @id @default(cuid())
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  account   String
+  debit     Float    @default(0)
+  credit    Float    @default(0)
+  memo      String?
+  createdAt DateTime @default(now())
+}
+
+model FamilyMember {
+  id           String @id @default(cuid())
+  ownerUserId  String
+  owner        User   @relation("FamilyOwner", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  memberUserId String?
+  member       User?  @relation("FamilyMemberUser", fields: [memberUserId], references: [id])
+  name         String
+  phone        String?
+  relation     String @default("family")
+}
+
+model PayLink {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  payerId   String?
+  payer     User?    @relation("PayLinkPayer", fields: [payerId], references: [id])
+  payerEmail String?
+  status    String   @default("open")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ExpectedParcel {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store         String?
+  tracking      String?
+  description   String
+  status        String   @default("expected")
+  receivedAt    DateTime?
+  storageFeeUsd Float    @default(0)
+  createdAt     DateTime @default(now())
+}
+
+model ShipmentBatch {
+  id          String     @id @default(cuid())
+  partnerId   String
+  partner     PartnerOrg @relation(fields: [partnerId], references: [id])
+  label       String
+  status      String     @default("open")
+  createdAt   DateTime   @default(now())
+  orders      Order[]
+  manifest    Manifest?
+}
+
+model Manifest {
+  id          String        @id @default(cuid())
+  partnerId   String
+  partner     PartnerOrg    @relation(fields: [partnerId], references: [id])
+  batchId     String        @unique
+  batch       ShipmentBatch @relation(fields: [batchId], references: [id])
+  flightRef   String?
+  departedAt  DateTime?
+  payloadJson String?
+  createdAt   DateTime      @default(now())
+}
+
+model CatalogProduct {
+  id              String  @id @default(cuid())
+  slug            String  @unique
+  title           String
+  description     String
+  imageUrl        String?
+  sourceUrl       String?
+  category        String
+  hub             String  @default("UAE")
+  landedPriceUsd  Float
+  active          Boolean @default(true)
+  weightKg        Float   @default(0.7)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  rating    Int
+  body      String?
+  createdAt DateTime @default(now())
+}
+
+model ReferralRedemption {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referrer    User     @relation("Referrer", fields: [referrerId], references: [id])
+  refereeId   String
+  referee     User     @relation("Referee", fields: [refereeId], references: [id])
+  creditUsd   Float    @default(5)
+  createdAt   DateTime @default(now())
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  body        String
+  published   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model EssentialsList {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime         @default(now())
+  items     EssentialsItem[]
+}
+
+model EssentialsItem {
+  id       String         @id @default(cuid())
+  listId   String
+  list     EssentialsList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  title    String
+  url      String?
+  priceUsd Float?
+}
+
+model CartItem {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  url                String
+  imageUrl           String?
+  priceUsd           Float
+  estimatedWeightKg  Float    @default(0.7)
+  hub                String   @default("UAE")
+  quantity           Int      @default(1)
+  createdAt          DateTime @default(now())
+}
+
+model WishlistItem {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  url               String
+  imageUrl          String?
+  priceUsd          Float?
+  targetPriceUsd    Float?
+  alertEnabled      Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+}
+
+model SharedCart {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  payloadJson String
+  createdById String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metaJson  String?
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model SupportMacro {
+  id        String @id @default(cuid())
+  title     String
+  body      String
+  active    Boolean @default(true)
+}
+
+model CategoryDuty {
+  id        String @id @default(cuid())
+  category  String @unique
+  dutyPct   Float
+  vatPct    Float  @default(0.11)
+  allowed   Boolean @default(true)
+}
+
+model FxBuffer {
+  id       String @id @default(cuid())
+  currency String @unique
+  toUsd    Float
+  bufferPct Float @default(0.02)
+}
+
+model ReturnRequest {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason    String
+  details   String?
+  status    String   @default("requested")
+  createdAt DateTime @default(now())
+}
+
+model PartnerInvoice {
+  id          String     @id @default(cuid())
+  partnerId   String
+  partner     PartnerOrg @relation(fields: [partnerId], references: [id])
+  weekOf      String
+  amountUsd   Float
+  kgTotal     Float
+  status      String     @default("open")
+  payloadJson String?
+  createdAt   DateTime   @default(now())
+}
+
+model AffiliateLink {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  label     String
+  creditUsd Float    @default(7)
+  clicks    Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ObservabilityEvent {
+  id        String   @id @default(cuid())
+  level     String
+  source    String
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
+}

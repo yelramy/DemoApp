@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Bridge — Add to quote",
+  "version": "0.1.0",
+  "description": "Send the current product page to Bridge for an all-in Lebanon quote.",
+  "action": {
+    "default_title": "Quote with Bridge",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab"],
+  "host_permissions": ["http://localhost:3000/*", "https://*/*"]
+}

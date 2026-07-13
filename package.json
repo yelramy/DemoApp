@@ -1,0 +1,17 @@
+{
+  "name": "bridge",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @bridge/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @bridge/db generate",
+    "db:push": "pnpm --filter @bridge/db push",
+    "db:seed": "pnpm --filter @bridge/db seed",
+    "lint": "pnpm -r lint"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
