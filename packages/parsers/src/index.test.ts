@@ -22,11 +22,42 @@ describe("product parser", () => {
     await expect(parseProductUrl(url)).rejects.toThrow();
   });
 
+  it("follows safe redirects and blocks unsafe ones", async () => {
+    const redirectRes = {
+      ok: false,
+      status: 301,
+      headers: new Headers({ location: "https://www.amazon.ae/dp/B0TEST" }),
+    };
+    const finalRes = {
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      text: async () => '<meta property="og:title" content="Redirected">',
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(redirectRes).mockResolvedValueOnce(finalRes));
+    await expect(parseProductUrl("https://amazon.ae/dp/B0TEST")).resolves.toMatchObject({
+      title: "Redirected",
+      url: "https://www.amazon.ae/dp/B0TEST",
+    });
+
+    const evilRedirect = {
+      ok: false,
+      status: 302,
+      headers: new Headers({ location: "https://169.254.169.254/latest/meta-data" }),
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(evilRedirect));
+    const result = await parseProductUrl("https://amazon.ae/dp/B0EVIL");
+    expect(result.notes).toContain("confirm price manually");
+    vi.unstubAllGlobals();
+  });
+
   it("extracts product metadata", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
+        status: 200,
+        headers: new Headers(),
         text: async () =>
           '<meta property="og:title" content="Shoes"><meta property="product:price:amount" content="100"><meta property="product:price:currency" content="AED">',
       }),

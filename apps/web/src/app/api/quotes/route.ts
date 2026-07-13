@@ -30,7 +30,19 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    parsed = await parseProductUrl(body.url);
+    try {
+      parsed = await parseProductUrl(body.url);
+    } catch (e) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "INVALID_URL",
+            message: e instanceof Error ? e.message : "Enter a valid product URL",
+          },
+        },
+        { status: 400 },
+      );
+    }
     if (parsed.priceUsd == null) {
       return NextResponse.json(
         {
