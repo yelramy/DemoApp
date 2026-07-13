@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+:root {
+  --sea: #0b4f6c;
+  --sea-deep: #073247;
+  --foam: #e8f4f8;
+  --sand: #f3ebe0;
+  --ink: #14212b;
+  --coral: #c45c26;
+  --accent: #c45c26;
+  --mist: #9db8c4;
+  --ok: #1f7a4c;
+  --warn: #a15c07;
+  --danger: #9b1c1c;
+  --radius: 18px;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-sea: var(--sea);
+  --color-sea-deep: var(--sea-deep);
+  --color-foam: var(--foam);
+  --color-sand: var(--sand);
+  --color-ink: var(--ink);
+  --color-accent: var(--accent);
+  --color-mist: var(--mist);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(11, 79, 108, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(196, 92, 38, 0.12), transparent 50%),
+    linear-gradient(180deg, #f7f3ec 0%, #eef5f8 45%, #f7f3ec 100%);
+  font-family: var(--font-body);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 560;
+  letter-spacing: -0.03em;
+}
+
+.container-bridge {
+  width: min(1120px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--sea);
+  color: white;
+  box-shadow: 0 12px 30px rgba(11, 79, 108, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--sea-deep);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--sea-deep);
+  border: 1px solid rgba(11, 79, 108, 0.2);
+}
+
+.panel {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(20, 33, 43, 0.08);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 50px rgba(20, 33, 43, 0.06);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid rgba(20, 33, 43, 0.12);
+  background: white;
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  font: inherit;
+  color: var(--ink);
+}
+
+.input:focus {
+  outline: 2px solid rgba(11, 79, 108, 0.25);
+  border-color: var(--sea);
+}
+
+.fade-up {
+  animation: fadeUp 0.7s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-sheen {
+  animation: sheen 8s ease-in-out infinite alternate;
+}
+
+@keyframes sheen {
+  from {
+    filter: saturate(1);
+  }
+  to {
+    filter: saturate(1.15);
+  }
+}

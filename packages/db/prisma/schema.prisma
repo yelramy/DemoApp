@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  OPS
+  PARTNER
+}
+
+enum OrderStatus {
+  draft
+  quoted
+  awaiting_payment
+  paid
+  buy_in_progress
+  purchased
+  awaiting_inbound
+  received_at_hub
+  on_hold_hub
+  consolidated
+  in_transit_to_lebanon
+  customs_clearance
+  customs_hold
+  out_for_delivery
+  delivered
+  completed
+  cancelled
+  refund_pending
+  refunded
+  claim_open
+  claim_resolved
+  failed
+}
+
+enum PaymentMethod {
+  WHISH
+  COD
+  OMT
+  CARD
+  CREDIT
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  phone        String?   @unique
+  email        String?   @unique
+  name         String?
+  role         UserRole  @default(CUSTOMER)
+  suiteCode    String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  addresses    Address[]
+  orders       Order[]   @relation("OrderCustomer")
+  paidOrders   Order[]   @relation("OrderPayer")
+  sessions     Session[]
+  otpChallenges OtpChallenge[]
+  tickets      Ticket[]
+  wallet       Wallet?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OtpChallenge {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  target    String
+  code      String
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Address {
+  id         String  @id @default(cuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String  @default("Home")
+  fullName   String
+  phone      String
+  city       String
+  area       String
+  street     String
+  building   String?
+  notes      String?
+  isDefault  Boolean @default(false)
+  orders     Order[]
+}
+
+model PartnerOrg {
+  id        String   @id @default(cuid())
+  name      String
+  hub       String   @default("UAE")
+  contact   String?
+  apiKey    String?  @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  orders    Order[]
+  events    PartnerEvent[]
+}
+
+model Quote {
+  id               String   @id @default(cuid())
+  userId           String?
+  hub              String
+  method           String
+  currency         String   @default("USD")
+  itemSubtotal     Float
+  buyFee           Float
+  chargeableKg     Float
+  shipping         Float
+  customsEstimate  Float
+  paymentFee       Float
+  discount         Float    @default(0)
+  total            Float
+  bridgeTake       Float
+  marginOk         Boolean
+  expiresAt        DateTime
+  payloadJson      String
+  createdAt        DateTime @default(now())
+  order            Order?
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  publicId        String        @unique
+  status          OrderStatus   @default(awaiting_payment)
+  customerId      String
+  customer        User          @relation("OrderCustomer", fields: [customerId], references: [id])
+  payerId         String?
+  payer           User?         @relation("OrderPayer", fields: [payerId], references: [id])
+  addressId       String?
+  address         Address?      @relation(fields: [addressId], references: [id])
+  quoteId         String?       @unique
+  quote           Quote?        @relation(fields: [quoteId], references: [id])
+  partnerId       String?
+  partner         PartnerOrg?   @relation(fields: [partnerId], references: [id])
+  paymentMethod   PaymentMethod
+  totalUsd        Float
+  itemTitle       String
+  itemUrl         String
+  itemImage       String?
+  retailerOrderId String?
+  retailerTrack   String?
+  hubTracking     String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  events          OrderEvent[]
+  payments        PaymentIntent[]
+  claims          Claim[]
+  tickets         Ticket[]
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  message   String
+  metaJson  String?
+  createdAt DateTime @default(now())
+}
+
+model PaymentIntent {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method      PaymentMethod
+  status      PaymentStatus @default(PENDING)
+  amountUsd   Float
+  providerRef String?
+  checkoutUrl String?
+  rawJson     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PartnerEvent {
+  id         String     @id @default(cuid())
+  partnerId  String
+  partner    PartnerOrg @relation(fields: [partnerId], references: [id])
+  orderId    String?
+  eventType  String
+  payloadJson String
+  createdAt  DateTime   @default(now())
+}
+
+model Claim {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason      String
+  details     String?
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+}
+
+model Ticket {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  orderId   String?
+  order     Order?   @relation(fields: [orderId], references: [id])
+  subject   String
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  messages  TicketMessage[]
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender    String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balanceUsd Float   @default(0)
+}
+
+model FeatureFlag {
+  key       String  @id
+  enabled   Boolean @default(false)
+  note      String?
+}
+
+model RateCardConfig {
+  id                 String @id @default(cuid())
+  hub                String
+  method             String
+  pricePerKg         Float
+  minCharge          Float
+  handlingPerParcel  Float
+  volumetricDivisor  Float  @default(5000)
+  active             Boolean @default(true)
+}

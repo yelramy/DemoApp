@@ -1,9 +1,19 @@
 # Bridge
 
-Cross-border shopping for Lebanon: paste a link, see an all-in USD price, pay with Whish (or COD/OMT/diaspora card), get door delivery.
+Shop the world. Pay with Whish. Delivered in Lebanon.
 
-**This repo currently contains the full product & engineering plan only.** Application code comes next.
+## Quick start
+```bash
+pnpm install
+pnpm db:generate && pnpm db:push && pnpm db:seed
+pnpm dev
+```
 
-Start here: [`PROJECT_MAP.md`](./PROJECT_MAP.md)
+- App: http://localhost:3000
+- OTP (sandbox): `246810`
+- Admin: `admin@bridge.lb`
+- Customer demo: `+96170123456`
 
-Plan docs: [`docs/bridge/`](./docs/bridge/)
+## Docs
+- [`PROJECT_MAP.md`](./PROJECT_MAP.md) — repo map
+- [`docs/bridge/`](./docs/bridge/) — full product & engineering plan

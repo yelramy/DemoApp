@@ -1,45 +1,46 @@
 # PROJECT_MAP
 
 ## What this repo is
-**Bridge** — English-language web product for Lebanon that lets people (and diaspora paying for family) buy from abroad, pay locally (Whish / COD / OMT), and get door delivery. Logistics is partnered (UAE-first); Bridge owns UX, quotes, payments, tracking, and customer trust.
+**Bridge** — English-language web product for Lebanon: paste a product link, get an all-in USD quote, pay with Whish/COD/OMT, track delivery. Logistics partnered (UAE-first).
 
 ## Status
-- DemoApp macOS template removed (branch `cursor/clear-demo-app-a9ff`).
-- Full build plan landed on `cursor/bridge-full-plan-a9ff` (this work).
-- **No application code yet** — plan only.
+- DemoApp removed (`cursor/clear-demo-app-a9ff`)
+- Full plan in `docs/bridge/` (`cursor/bridge-full-plan-a9ff`)
+- **Application code scaffolded** on `cursor/bridge-build-a9ff` (Phase 0–1 spine working)
 
-## Doc index (read in order)
-| File | Contents |
+## Run locally
+```bash
+pnpm install
+pnpm db:generate && pnpm db:push && pnpm db:seed
+pnpm dev
+```
+Open http://localhost:3000  
+Sandbox OTP: `246810`  
+Demo customer phone: `+96170123456`  
+Admin email: `admin@bridge.lb`  
+Partner API key: `partner-demo-key`
+
+## Code map
+| Path | Role |
 |---|---|
-| `docs/bridge/00-VISION.md` | Problem, positioning, brand, success metrics |
-| `docs/bridge/01-MARKET-AND-POSITIONING.md` | Competitors, gaps, why Bridge wins |
-| `docs/bridge/02-PERSONAS-AND-JOURNEYS.md` | Users, partners, ops; end-to-end journeys |
-| `docs/bridge/03-FULL-FEATURE-CATALOG.md` | Every feature surface (customer → admin → partner) |
-| `docs/bridge/04-INFORMATION-ARCHITECTURE.md` | Sitemap, nav, screens |
-| `docs/bridge/05-ORDER-STATE-MACHINE.md` | Order lifecycle, edge cases, SLAs |
-| `docs/bridge/06-PRICING-AND-MARGINS.md` | Quote engine, fees, margin rules |
-| `docs/bridge/07-PAYMENTS.md` | Whish, COD, OMT, diaspora card, reconciliation |
-| `docs/bridge/08-LOGISTICS-PARTNER-PROTOCOL.md` | Partner API/ops contract, hubs, customs |
-| `docs/bridge/09-SYSTEM-ARCHITECTURE.md` | Services, stack, data model, infra |
-| `docs/bridge/10-SECURITY-COMPLIANCE-RISK.md` | Fraud, KYC, banned goods, legal |
-| `docs/bridge/11-AUTOMATION-AND-OPS.md` | What auto vs human; staffing for low weekly hours |
-| `docs/bridge/12-BUILD-PHASES.md` | Full scope build order (not “MVP-only”) |
-| `docs/bridge/13-LAUNCH-AND-GROWTH.md` | Soft launch, marketing, support playbooks |
-| `docs/bridge/14-OPEN-DECISIONS.md` | Decisions that still need a human call |
-| `docs/bridge/15-API-SURFACE.md` | Full HTTP API target |
-| `docs/bridge/16-NOTIFICATION-TEMPLATES.md` | WhatsApp/email/ops copy |
-| `docs/bridge/17-TEST-PLAN.md` | Unit/integration/E2E/UAT |
+| `apps/web` | Next.js marketing + customer app + admin + partner + API routes |
+| `packages/db` | Prisma schema + SQLite client |
+| `packages/pricing` | Quote/margin engine (tested) |
+| `packages/parsers` | URL/manual product parse |
+| `docs/bridge/` | Full product plan |
 
-## Intended stack (planned)
-- Web: Next.js (App Router) + TypeScript
-- API/DB: NestJS or Next route handlers + PostgreSQL + Redis
-- Admin: same monorepo `/admin`
-- Partner portal: `/partner`
-- Jobs: queue (BullMQ) for quotes, buys, notifications
-- Payments: Whish merchant + COD + OMT reference flow
-- Hosting: Vercel (web) + managed Postgres + worker
+## Implemented now
+- Marketing: home, how-it-works, pricing, pay-for-family, legal stubs
+- Auth: phone/email OTP (sandbox)
+- Quotes: link parse + manual + all-in USD breakdown
+- Checkout: Whish (simulated), COD, OMT intent
+- Orders + timeline
+- Admin buy queue + status transitions
+- Partner event ingestion API + demo UI
+- Pricing unit tests
 
-## Next agent actions
-1. Lock open decisions in `14-OPEN-DECISIONS.md` with the founder.
-2. Scaffold monorepo per `09-SYSTEM-ARCHITECTURE.md` and `12-BUILD-PHASES.md` Phase 0–1.
-3. Do not reintroduce DemoApp.
+## Still to build (per `docs/bridge/12-BUILD-PHASES.md`)
+Phase 2+: claims UI, WhatsApp provider, reconciliation, suite ship-for-me, diaspora card PSP, real Whish merchant, extension, curated catalog, Nest/Redis split when infra available
+
+## Defaults locked
+See `docs/bridge/14-OPEN-DECISIONS.md` — defaults accepted for build (Bridge, Nest deferred to Next routes for now, UAE-first, EN-only, margin floor $4/12%).

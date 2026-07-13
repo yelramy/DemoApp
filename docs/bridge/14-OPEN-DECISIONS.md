@@ -24,5 +24,8 @@ Short message for partners:
 
 > Hi — we’re building Bridge, a Lebanon shopping app (Whish checkout + tracking). We need a UAE warehouse partner for receiving, photos, consolidation, and shipping to Lebanon. Looking for white-label/B2B per-kg rates, weekly settlement, and intake photos. Can we run a 5–10 parcel pilot?
 
-## After decisions
-Update this file with choices + dates, then start Phase 0 scaffold.
+## Decisions locked for build (2026-07-13)
+Defaults accepted to start coding:
+- D1 Bridge · D5 customs estimate · D6 limited COD · D7 EN only · D8 beauty/supplements/fashion/accessories · D9 manual buy queue · D11 **Next.js API routes for now** (NestJS when dedicated workers/Redis available) · D12 partner D2D · D14 $4 or 12% floor
+
+Remaining to confirm with live vendors: D2 entity, D3 partner MSA, D4 importer of record, D10 Tap.
