@@ -16,6 +16,23 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
+
+  async function pasteLink() {
+    setPasteHint(null);
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (!text) {
+        setPasteHint("Clipboard empty — copy a product link first");
+        return;
+      }
+      setUrl(text);
+      setManual(false);
+      setPasteHint("Pasted");
+    } catch {
+      setPasteHint("Allow clipboard access, or long-press to paste");
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,14 +76,30 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
     <form onSubmit={onSubmit} className="space-y-3">
       <label className="block text-sm font-semibold text-[var(--sea-deep)]">
         Product link
-        <input
-          className="input mt-1"
-          placeholder="https://www.noon.com/... or amazon.ae/..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required={!manual}
-        />
+        <div className="mt-1 flex gap-2">
+          <input
+            className="input"
+            inputMode="url"
+            autoCapitalize="off"
+            autoCorrect="off"
+            enterKeyHint="go"
+            placeholder="Paste noon / amazon link"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            required={!manual}
+          />
+          <button
+            type="button"
+            className="btn btn-ghost shrink-0 px-3 text-sm"
+            onClick={pasteLink}
+          >
+            Paste
+          </button>
+        </div>
       </label>
+      {pasteHint ? (
+        <p className="text-xs font-semibold text-[var(--sea)]">{pasteHint}</p>
+      ) : null}
       {manual ? (
         <>
           <input
@@ -80,6 +113,7 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
             className="input"
             placeholder="Price in USD"
             type="number"
+            inputMode="decimal"
             min="1"
             step="0.01"
             value={priceUsd}
@@ -94,49 +128,55 @@ export function QuoteForm({ compact = false }: { compact?: boolean }) {
           />
         </>
       ) : null}
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input"
-          placeholder="Size / variant"
-          value={variantLabel}
-          onChange={(e) => setVariantLabel(e.target.value)}
-        />
-        <select
-          className="input"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="">Category (optional)</option>
-          <option value="beauty">Beauty</option>
-          <option value="supplements">Supplements</option>
-          <option value="fashion">Fashion</option>
-          <option value="electronics">Electronics</option>
-        </select>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input"
-          placeholder="Promo (BRIDGE10)"
-          value={promoCode}
-          onChange={(e) => setPromoCode(e.target.value)}
-        />
-        <select className="input" value={hub} onChange={(e) => setHub(e.target.value)}>
-          <option value="">Auto hub</option>
-          <option value="UAE">UAE</option>
-          <option value="US">US</option>
-          <option value="TR">TR</option>
-          <option value="CN">CN</option>
-        </select>
-      </div>
+      {!compact ? (
+        <details className="rounded-2xl border border-black/5 bg-white/60 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--sea-deep)]">
+            Options (variant, hub, promo)
+          </summary>
+          <div className="mt-3 grid gap-2">
+            <input
+              className="input"
+              placeholder="Size / variant"
+              value={variantLabel}
+              onChange={(e) => setVariantLabel(e.target.value)}
+            />
+            <select
+              className="input"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">Category (optional)</option>
+              <option value="beauty">Beauty</option>
+              <option value="supplements">Supplements</option>
+              <option value="fashion">Fashion</option>
+              <option value="electronics">Electronics</option>
+            </select>
+            <input
+              className="input"
+              placeholder="Promo (BRIDGE10)"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              autoCapitalize="characters"
+            />
+            <select className="input" value={hub} onChange={(e) => setHub(e.target.value)}>
+              <option value="">Auto hub</option>
+              <option value="UAE">UAE</option>
+              <option value="US">US</option>
+              <option value="TR">TR</option>
+              <option value="CN">CN</option>
+            </select>
+          </div>
+        </details>
+      ) : null}
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <button className="btn btn-primary" disabled={loading} type="submit">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button className="btn btn-primary w-full" disabled={loading} type="submit">
           {loading ? "Calculating…" : "Get all-in quote"}
         </button>
         {!compact ? (
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn btn-ghost w-full sm:w-auto"
             onClick={() => setManual((v) => !v)}
           >
             {manual ? "Use link only" : "Enter manually"}

@@ -32,7 +32,7 @@ export function OrderActions({
   if (mode === "card") {
     return (
       <button
-        className="btn btn-primary"
+        className="btn btn-primary w-full"
         type="button"
         disabled={loading}
         onClick={async () => {
@@ -42,7 +42,7 @@ export function OrderActions({
           router.refresh();
         }}
       >
-        {loading ? "…" : "Simulate card pay"}
+        {loading ? "…" : "Pay with card"}
       </button>
     );
   }

@@ -48,12 +48,12 @@ export default async function OrderDetailPage({
       : null;
 
   return (
-    <div className="container-bridge grid gap-8 py-10 lg:grid-cols-[1fr_0.85fr]">
-      <section className="panel p-6 md:p-8">
+    <div className="container-bridge grid gap-5 py-5 sm:gap-8 sm:py-8 lg:grid-cols-[1fr_0.85fr] lg:py-10">
+      <section className="panel p-4 sm:p-6 md:p-8">
         <p className="text-xs font-bold uppercase tracking-wider text-[var(--mist)]">
           {order.publicId}
         </p>
-        <h1 className="display mb-2 text-3xl text-[var(--sea-deep)]">
+        <h1 className="display mb-2 text-2xl text-[var(--sea-deep)] sm:text-3xl">
           {order.itemTitle}
         </h1>
         <p className="mb-6 text-sm font-semibold text-[var(--sea)]">
@@ -135,20 +135,20 @@ export default async function OrderDetailPage({
           </div>
         ) : null}
         {(needsWhish || sp.pay === "whish") && (
-          <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
+          <div className="sticky-cta mt-6">
             <p className="mb-3 text-sm">Complete Whish payment to start buying.</p>
             <PayWhishButton orderId={order.id} />
           </div>
         )}
         {(needsCard || sp.pay === "card") && (
-          <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
+          <div className="sticky-cta mt-6">
             <p className="mb-3 text-sm">Complete card sandbox payment.</p>
             <OrderActions orderId={order.id} mode="card" />
           </div>
         )}
         {order.paymentMethod === "OMT" &&
           order.payments.every((p) => p.status !== "PAID") && (
-            <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
+            <div className="sticky-cta mt-6">
               <p className="mb-3 text-sm">Pay via OMT and enter the reference.</p>
               <OrderActions orderId={order.id} mode="omt" />
             </div>
@@ -168,8 +168,8 @@ export default async function OrderDetailPage({
           />
         </div>
       </section>
-      <section className="panel p-6 md:p-8">
-        <h2 className="display mb-4 text-2xl text-[var(--sea-deep)]">Timeline</h2>
+      <section className="panel p-4 sm:p-6 md:p-8">
+        <h2 className="display mb-4 text-xl text-[var(--sea-deep)] sm:text-2xl">Timeline</h2>
         <ol className="space-y-4">
           {order.events.map((ev) => (
             <li key={ev.id} className="border-l-2 border-[var(--sea)]/30 pl-4">

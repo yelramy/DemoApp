@@ -35,8 +35,8 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="container-bridge py-10">
-      <h1 className="display mb-6 text-3xl text-[var(--sea-deep)]">Settings</h1>
+    <div className="container-bridge py-5 sm:py-10">
+      <h1 className="display mb-4 text-2xl text-[var(--sea-deep)] sm:mb-6 sm:text-3xl">Settings</h1>
       <form
         className="panel max-w-xl space-y-3 p-6"
         onSubmit={async (e) => {
@@ -97,14 +97,24 @@ export default function SettingsPage() {
           value={form.kycDocumentUrl}
           onChange={(e) => setForm({ ...form, kycDocumentUrl: e.target.value })}
         />
-        <button className="btn btn-primary" type="submit">
+        <button className="btn btn-primary w-full" type="submit">
           Save profile
         </button>
-        <a className="btn btn-ghost" href="/api/me/export">
+        <a className="btn btn-ghost w-full" href="/api/me/export">
           Export my data
         </a>
         <button
-          className="btn btn-ghost text-[var(--danger)]"
+          className="btn btn-ghost w-full"
+          type="button"
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/";
+          }}
+        >
+          Log out
+        </button>
+        <button
+          className="btn btn-ghost w-full text-[var(--danger)]"
           type="button"
           onClick={async () => {
             if (!confirm("Delete/anonymize account?")) return;

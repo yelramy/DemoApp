@@ -50,13 +50,13 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="container-bridge py-16">
-      <div className="panel mx-auto max-w-md p-8">
+    <div className="container-bridge py-8 sm:py-16">
+      <div className="panel mx-auto max-w-md p-5 sm:p-8">
         <h1 className="display mb-2 text-3xl text-[var(--sea-deep)]">Log in</h1>
         <p className="mb-6 text-sm text-[var(--ink)]/70">
           Phone OTP for Lebanon. Email OTP for diaspora payers.
         </p>
-        <div className="mb-4 flex gap-2">
+        <div className="mb-4 grid grid-cols-2 gap-2">
           <button
             className={`btn text-sm ${mode === "phone" ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setMode("phone")}
@@ -81,6 +81,8 @@ export default function LoginPage() {
               className="input"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
+              inputMode={mode === "phone" ? "tel" : "email"}
+              autoComplete={mode === "phone" ? "tel" : "email"}
               placeholder={mode === "phone" ? "+961..." : "you@email.com"}
             />
             <button className="btn btn-primary w-full" type="submit">
@@ -98,6 +100,8 @@ export default function LoginPage() {
               className="input"
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
               placeholder="Enter OTP"
             />
             <button className="btn btn-primary w-full" type="submit">

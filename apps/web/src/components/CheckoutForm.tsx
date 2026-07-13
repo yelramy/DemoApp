@@ -37,10 +37,11 @@ export function CheckoutForm({
   const tip = Number(tipUsd || 0);
   const walletApplied = useWalletCredit ? Math.min(walletBalance, total) : 0;
   const charge = Math.round((total - walletApplied + tip) * 100) / 100;
-  const codDeposit = method === "COD" && charge > 100 ? Math.round(charge * 0.2 * 100) / 100 : 0;
+  const codDeposit =
+    method === "COD" && charge > 100 ? Math.round(charge * 0.2 * 100) / 100 : 0;
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(e?: React.FormEvent) {
+    e?.preventDefault();
     setLoading(true);
     setError(null);
     setDepositNote(null);
@@ -80,14 +81,14 @@ export function CheckoutForm({
   }
 
   return (
-    <form onSubmit={submit} className="mt-6 space-y-3">
+    <form onSubmit={submit} className="mt-6 space-y-3 pb-24">
       <p className="text-sm font-semibold">Pay {money(charge)} with</p>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2">
         {(["WHISH", "COD", "OMT", "CARD"] as const).map((m) => (
           <button
             key={m}
             type="button"
-            className={`btn text-xs ${method === m ? "btn-primary" : "btn-ghost"}`}
+            className={`btn text-sm ${method === m ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setMethod(m)}
           >
             {m}
@@ -96,7 +97,8 @@ export function CheckoutForm({
       </div>
       {method === "COD" && codDeposit > 0 ? (
         <p className="rounded-xl bg-[var(--sand)] p-3 text-xs">
-          COD over $100 requires ~20% deposit ({money(codDeposit)}) now; remainder on delivery.
+          COD over $100 requires ~20% deposit ({money(codDeposit)}) now; remainder on
+          delivery.
         </p>
       ) : null}
       <input
@@ -104,6 +106,7 @@ export function CheckoutForm({
         placeholder="City"
         value={city}
         onChange={(e) => setCity(e.target.value)}
+        autoComplete="address-level2"
         required
       />
       <input
@@ -118,48 +121,60 @@ export function CheckoutForm({
         placeholder="Street / building"
         value={street}
         onChange={(e) => setStreet(e.target.value)}
+        autoComplete="street-address"
       />
-      <input
-        className="input"
-        placeholder="Gift note (optional)"
-        value={giftNote}
-        onChange={(e) => setGiftNote(e.target.value)}
-      />
-      <input
-        className="input"
-        type="number"
-        min="0"
-        step="0.5"
-        placeholder="Courier tip USD (optional)"
-        value={tipUsd}
-        onChange={(e) => setTipUsd(e.target.value)}
-      />
-      {walletBalance > 0 ? (
-        <label className="flex items-center gap-2 text-sm">
+      <details className="rounded-2xl border border-black/5 bg-white/60 p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--sea-deep)]">
+          Gift note, tip, pay link
+        </summary>
+        <div className="mt-3 space-y-2">
           <input
-            type="checkbox"
-            checked={useWalletCredit}
-            onChange={(e) => setUseWalletCredit(e.target.checked)}
+            className="input"
+            placeholder="Gift note (optional)"
+            value={giftNote}
+            onChange={(e) => setGiftNote(e.target.value)}
           />
-          Use wallet credit ({money(walletBalance)} available)
-        </label>
-      ) : null}
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={createPayLink}
-          onChange={(e) => setCreatePayLink(e.target.checked)}
-        />
-        Create diaspora pay link instead of paying now
-      </label>
-      {createPayLink ? (
-        <input
-          className="input"
-          placeholder="Payer email"
-          value={payerEmail}
-          onChange={(e) => setPayerEmail(e.target.value)}
-        />
-      ) : null}
+          <input
+            className="input"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.5"
+            placeholder="Courier tip USD"
+            value={tipUsd}
+            onChange={(e) => setTipUsd(e.target.value)}
+          />
+          {walletBalance > 0 ? (
+            <label className="flex min-h-12 items-center gap-3 text-sm">
+              <input
+                type="checkbox"
+                className="h-5 w-5"
+                checked={useWalletCredit}
+                onChange={(e) => setUseWalletCredit(e.target.checked)}
+              />
+              Use wallet ({money(walletBalance)})
+            </label>
+          ) : null}
+          <label className="flex min-h-12 items-center gap-3 text-sm">
+            <input
+              type="checkbox"
+              className="h-5 w-5"
+              checked={createPayLink}
+              onChange={(e) => setCreatePayLink(e.target.checked)}
+            />
+            Diaspora pay link instead
+          </label>
+          {createPayLink ? (
+            <input
+              className="input"
+              placeholder="Payer email"
+              inputMode="email"
+              value={payerEmail}
+              onChange={(e) => setPayerEmail(e.target.value)}
+            />
+          ) : null}
+        </div>
+      </details>
       {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
       {depositNote ? <p className="text-sm text-[var(--ok)]">{depositNote}</p> : null}
       {payLink ? (
@@ -170,9 +185,20 @@ export function CheckoutForm({
           </a>
         </p>
       ) : null}
-      <button className="btn btn-primary w-full" disabled={loading} type="submit">
-        {loading ? "Placing order…" : createPayLink ? "Create pay link" : "Confirm order"}
-      </button>
+
+      <div className="sticky-cta">
+        <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+          <span className="text-[var(--ink)]/65">Due now</span>
+          <strong className="display text-xl text-[var(--sea-deep)]">{money(charge)}</strong>
+        </div>
+        <button className="btn btn-primary w-full" disabled={loading} type="submit">
+          {loading
+            ? "Placing order…"
+            : createPayLink
+              ? "Create pay link"
+              : `Confirm · ${method}`}
+        </button>
+      </div>
     </form>
   );
 }
