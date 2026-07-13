@@ -191,6 +191,15 @@ async function main() {
     });
   }
 
+  for (const macro of [
+    { title: "Where is my order?", body: "Open your order page for the live timeline. Typical UAE→Lebanon is 10–21 days." },
+    { title: "Customs hold", body: "Customs sometimes needs a clearer invoice. Reply with ID if requested and we’ll unblock." },
+    { title: "Refund ETA", body: "Approved refunds post back to Whish/card within 1–3 business days in sandbox/live rails." },
+  ]) {
+    const existing = await prisma.supportMacro.findFirst({ where: { title: macro.title } });
+    if (!existing) await prisma.supportMacro.create({ data: macro });
+  }
+
   console.log("Seed complete");
 }
 

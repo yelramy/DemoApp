@@ -4,6 +4,8 @@ import { prisma } from "@bridge/db";
 import { getSessionUser } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { CheckoutForm } from "@/components/CheckoutForm";
+import { HubCompare } from "@/components/HubCompare";
+import { AddToCartButton } from "@/components/AddToCartButton";
 
 export default async function QuotePage({
   params,
@@ -101,7 +103,22 @@ export default async function QuotePage({
             </Link>
           </p>
         ) : (
-          <CheckoutForm quoteId={quote.id} total={quote.total} />
+          <>
+            <CheckoutForm quoteId={quote.id} total={quote.total} />
+            <AddToCartButton
+              title={payload.parsed.title}
+              url={payload.parsed.url}
+              imageUrl={payload.parsed.imageUrl}
+              priceUsd={quote.itemSubtotal}
+              weightKg={quote.chargeableKg}
+              hub={quote.hub}
+            />
+            <HubCompare
+              title={payload.parsed.title}
+              priceUsd={quote.itemSubtotal}
+              weightKg={quote.chargeableKg}
+            />
+          </>
         )}
       </section>
     </div>

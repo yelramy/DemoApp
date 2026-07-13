@@ -111,10 +111,18 @@ export default async function OrderDetailPage({
             <OrderActions orderId={order.id} mode="card" />
           </div>
         )}
+        {order.paymentMethod === "OMT" &&
+          order.payments.every((p) => p.status !== "PAID") && (
+            <div className="mt-6 rounded-2xl bg-[var(--foam)] p-4">
+              <p className="mb-3 text-sm">Pay via OMT and enter the reference.</p>
+              <OrderActions orderId={order.id} mode="omt" />
+            </div>
+          )}
         <div className="mt-6">
           <OrderActions
             orderId={order.id}
             mode="actions"
+            paymentMethod={order.paymentMethod}
             canClaim={["delivered", "completed"].includes(order.status)}
             canReview={["delivered", "completed"].includes(order.status) && !order.review}
           />

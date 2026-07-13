@@ -83,6 +83,15 @@ model User {
   notifications NotificationLog[]
   referralsMade ReferralRedemption[] @relation("Referrer")
   referralsUsed ReferralRedemption[] @relation("Referee")
+  preferredPayment String @default("WHISH")
+  notifyWhatsApp Boolean @default(true)
+  notifyEmail    Boolean @default(true)
+  notifySms      Boolean @default(false)
+  kycStatus      String  @default("none")
+  kycDocumentUrl String?
+  cartItems      CartItem[]
+  wishlistItems  WishlistItem[]
+  auditLogs      AuditLog[] @relation("AuditActor")
 }
 
 model Session {
@@ -188,6 +197,10 @@ model Order {
   finalWeightKg    Float?
   notes            String?
   giftNote         String?
+  deliveryOtp      String?
+  deliveryProofUrl String?
+  etaDaysMin       Int?
+  etaDaysMax       Int?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   events           OrderEvent[]
@@ -198,6 +211,7 @@ model Order {
   payLinks         PayLink[]
   review           Review?
   ledgerEntries    LedgerEntry[]
+  csatScore        Int?
 }
 
 model OrderEvent {
@@ -472,4 +486,66 @@ model EssentialsItem {
   title    String
   url      String?
   priceUsd Float?
+}
+
+model CartItem {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  url                String
+  imageUrl           String?
+  priceUsd           Float
+  estimatedWeightKg  Float    @default(0.7)
+  hub                String   @default("UAE")
+  quantity           Int      @default(1)
+  createdAt          DateTime @default(now())
+}
+
+model WishlistItem {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  url               String
+  imageUrl          String?
+  priceUsd          Float?
+  targetPriceUsd    Float?
+  alertEnabled      Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+}
+
+model SharedCart {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  payloadJson String
+  createdById String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  metaJson  String?
+  createdAt DateTime @default(now())
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model SupportMacro {
+  id        String @id @default(cuid())
+  title     String
+  body      String
+  active    Boolean @default(true)
 }

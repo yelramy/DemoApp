@@ -19,9 +19,12 @@ export default async function AppHome() {
     <div className="container-bridge space-y-6 py-10">
       <div className="flex flex-wrap gap-2 text-sm font-semibold">
         {[
+          ["/app/cart", "Cart"],
+          ["/app/wishlist", "Wishlist"],
           ["/app/suite", "Suite"],
           ["/app/support", "Support"],
           ["/app/family", "Family"],
+          ["/app/settings", "Settings"],
           ["/catalog", "Catalog"],
           ["/extension", "Extension"],
           ["/app/addresses", "Addresses"],

@@ -12,11 +12,13 @@ export async function SiteHeader() {
         <Link href="/how-it-works">How it works</Link>
         <Link href="/pricing">Pricing</Link>
         <Link href="/catalog">Catalog</Link>
+        <Link href="/hubs">Hubs</Link>
+        <Link href="/trust">Trust</Link>
         <Link href="/pay-for-family">Pay for family</Link>
         <Link href="/blog">Guides</Link>
         <Link href="/app">Shop</Link>
         {user?.role === "ADMIN" || user?.role === "OPS" ? (
-          <Link href="/admin">Admin</Link>
+          <Link href="/admin/console">Admin</Link>
         ) : null}
         <Link href="/partner">Partner</Link>
       </nav>

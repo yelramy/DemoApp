@@ -1,14 +1,9 @@
-# Bridge browser extension
+# Bridge Chrome MV3 extension
 
-Phase 5 ships a **bookmarklet** at `/extension` that POSTs the current page URL to `/api/quotes`.
+1. Open `chrome://extensions`
+2. Enable Developer mode
+3. Load unpacked → select `apps/extension`
+4. Log into Bridge at `http://localhost:3000`
+5. On a product page, click the extension → **Get quote**
 
-## Future MV3 package
-```
-apps/extension/
-  manifest.json
-  background.js
-  content.js
-```
-Use the same quote API with extension auth cookies or a device token.
-
-For now, bookmarklet covers “Add to Bridge” without a Chrome Web Store release.
+Uses the same `/api/quotes` API as the bookmarklet. For production, point `bridgeOrigin` at your deployed domain and ship host permissions accordingly.

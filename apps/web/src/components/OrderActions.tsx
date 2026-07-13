@@ -8,16 +8,19 @@ export function OrderActions({
   mode,
   canClaim,
   canReview,
+  paymentMethod,
 }: {
   orderId: string;
-  mode: "card" | "actions";
+  mode: "card" | "actions" | "omt";
   canClaim?: boolean;
   canReview?: boolean;
+  paymentMethod?: string;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [claimReason, setClaimReason] = useState("damage");
   const [rating, setRating] = useState(5);
+  const [omtRef, setOmtRef] = useState("");
 
   if (mode === "card") {
     return (
@@ -37,11 +40,69 @@ export function OrderActions({
     );
   }
 
+  if (mode === "omt") {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <input
+          className="input max-w-[200px]"
+          placeholder="OMT reference"
+          value={omtRef}
+          onChange={(e) => setOmtRef(e.target.value)}
+        />
+        <button
+          className="btn btn-primary"
+          type="button"
+          onClick={async () => {
+            await fetch(`/api/orders/${orderId}/pay-omt`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ reference: omtRef }),
+            });
+            router.refresh();
+          }}
+        >
+          Confirm OMT
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 rounded-2xl border border-black/5 p-4">
-      <a className="btn btn-ghost text-xs" href={`/api/orders/${orderId}/invoice`}>
-        Download invoice
-      </a>
+      <div className="flex flex-wrap gap-2">
+        <a className="btn btn-ghost text-xs" href={`/api/orders/${orderId}/invoice`}>
+          Invoice
+        </a>
+        <button
+          className="btn btn-ghost text-xs"
+          type="button"
+          onClick={async () => {
+            const res = await fetch(`/api/orders/${orderId}/reorder`, { method: "POST" });
+            const d = await res.json();
+            if (d.redirect) router.push(d.redirect);
+          }}
+        >
+          Reorder
+        </button>
+        <button
+          className="btn btn-ghost text-xs text-[var(--danger)]"
+          type="button"
+          onClick={async () => {
+            if (!confirm("Cancel this order?")) return;
+            await fetch(`/api/orders/${orderId}/cancel`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ toWallet: true }),
+            });
+            router.refresh();
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+      {paymentMethod === "OMT" ? (
+        <OrderActions orderId={orderId} mode="omt" />
+      ) : null}
       {canClaim ? (
         <div className="flex flex-wrap gap-2">
           <select
