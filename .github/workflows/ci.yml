@@ -16,8 +16,10 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - run: pnpm install
-      - run: pnpm --filter @bridge/pricing test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --prod --audit-level high
+      - run: pnpm test
+      - run: pnpm lint
       - run: pnpm --filter @bridge/db exec prisma generate
       - name: Prepare SQLite
         run: |

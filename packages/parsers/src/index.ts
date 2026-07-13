@@ -66,16 +66,36 @@ function toUsd(price: number | null, currency: string | null) {
 }
 
 export async function parseProductUrl(url: string): Promise<ParsedProduct> {
-  const { store, hubHint } = detectStore(url);
+  const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== "https:") {
+    throw new Error("Only HTTPS product URLs are supported");
+  }
+  const hostname = parsedUrl.hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "::1" ||
+    hostname.endsWith(".local") ||
+    /^(10|127)\./.test(hostname) ||
+    /^192\.168\./.test(hostname) ||
+    /^169\.254\./.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+  ) {
+    throw new Error("Private network URLs are not supported");
+  }
+
+  const normalizedUrl = parsedUrl.toString();
+  const { store, hubHint } = detectStore(normalizedUrl);
   let html = "";
   let fetchOk = false;
   try {
-    const res = await fetch(url, {
+    const res = await fetch(normalizedUrl, {
       headers: {
         "user-agent":
           "Mozilla/5.0 (compatible; BridgeBot/1.0; +https://bridge.lb)",
         accept: "text/html",
       },
+      redirect: "error",
       signal: AbortSignal.timeout(8000),
     });
     if (res.ok) {
@@ -109,7 +129,7 @@ export async function parseProductUrl(url: string): Promise<ParsedProduct> {
     : 0.2;
 
   return {
-    url,
+    url: normalizedUrl,
     store,
     title: title.slice(0, 200),
     priceUsd,
